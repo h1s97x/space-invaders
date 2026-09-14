@@ -11,7 +11,7 @@ inputs:
     description: "GitHub token，用于拉取贡献图"
     required: true
   username:
-    description: "为谁生成 GIF（默认仓库 owner）"
+    description: "为谁生成 GIF（留空 = 仓库 owner）"
     required: false
     default: ""
   output-path:
@@ -34,6 +34,10 @@ inputs:
     description: "高贡献格出 BOSS 的概率 (0~1)"
     required: false
     default: "0.18"
+  seed:
+    description: "固定随机种子（留空 = 每次随机）"
+    required: false
+    default: ""
   no-amend:
     description: "是否关闭 amend 上一次 commit（默认自动 amend 避免污染历史）"
     required: false
@@ -46,10 +50,13 @@ inputs:
 outputs:
   output:
     description: "生成的 GIF 路径"
+    value: ${{ steps.generate.outputs.output }}
   frames:
     description: "帧数"
+    value: ${{ steps.generate.outputs.frames }}
   score:
     description: "最终得分"
+    value: ${{ steps.generate.outputs.score }}
 
 runs:
   using: "composite"
@@ -57,52 +64,81 @@ runs:
     - name: 🐍 Check Python + Pillow
       shell: bash
       run: |
-        python3 -c "import PIL" 2>/dev/null || pip install --quiet pillow
+        if ! python3 -c "import PIL" 2>/dev/null; then
+          # Ubuntu 24.04 等 PEP 668 环境需要 --break-system-packages
+          python3 -m pip install --quiet --break-system-packages pillow 2>/dev/null \
+            || python3 -m pip install --quiet pillow 2>/dev/null \
+            || pip install --quiet pillow
+        fi
 
     - name: 💥 Generate GIF
       id: generate
       shell: bash
       env:
+        # ⚠️ 所有用户可控输入一律走 env 传参，绝不内插进 run: 脚本（防脚本注入）
         GH_TOKEN: ${{ inputs.github-token }}
-        GITHUB_USER: ${{ inputs.username }}
+        INPUT_USERNAME: ${{ inputs.username || github.repository_owner }}
+        INPUT_OUTPUT: ${{ inputs.output-path }}
+        INPUT_STRATEGY: ${{ inputs.strategy }}
+        INPUT_FPS: ${{ inputs.fps }}
+        INPUT_MAX_FRAME: ${{ inputs.max-frame }}
+        INPUT_BOSS_CHANCE: ${{ inputs.boss-chance }}
+        INPUT_SEED: ${{ inputs.seed }}
       run: |
         cd "${{ github.action_path }}"
-        python3 gh_pixel_pulverizer/cli.py \
-          "${{ inputs.username }}" \
-          -o "${{ inputs.output-path }}" \
-          -s "${{ inputs.strategy }}" \
-          --fps "${{ inputs.fps }}" \
-          --max-frame "${{ inputs.max-frame }}" \
-          --boss-chance "${{ inputs.boss-chance }}"
 
-        # 把结果 output 给后续 step
-        if [ -f "${{ inputs.output-path }}" ]; then
-          echo "output=${{ inputs.output-path }}" >> "$GITHUB_OUTPUT"
+        EXTRA=()
+        if [ -n "${INPUT_SEED}" ]; then
+          EXTRA=(--seed "${INPUT_SEED}")
         fi
+
+        python3 gh_pixel_pulverizer/cli.py \
+          "${INPUT_USERNAME}" \
+          -o "${INPUT_OUTPUT}" \
+          -s "${INPUT_STRATEGY}" \
+          --fps "${INPUT_FPS}" \
+          --max-frame "${INPUT_MAX_FRAME}" \
+          --boss-chance "${INPUT_BOSS_CHANCE}" \
+          "${EXTRA[@]}"
 
     - name: 📦 Commit & Push (skip if disabled)
       if: ${{ inputs.no-commit != 'true' }}
       shell: bash
+      env:
+        INPUT_OUTPUT: ${{ inputs.output-path }}
+        INPUT_NO_AMEND: ${{ inputs.no-amend }}
       run: |
-        cd "${{ github.workspace }}"
+        cd "${GITHUB_WORKSPACE}"
         git config user.name  "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
 
-        git add "${{ inputs.output-path }}"
+        if [ ! -f "${INPUT_OUTPUT}" ]; then
+          echo "❌ 未找到 ${INPUT_OUTPUT}，跳过 commit"
+          exit 0
+        fi
 
-        # 如果只有这一个文件变更，且上一个 commit 也是我们写的 → amend
+        git add -- "${INPUT_OUTPUT}"
+
+        # 只有 GIF 本身变了才需要提交
+        if git diff --cached --quiet -- "${INPUT_OUTPUT}"; then
+          echo "ℹ️ ${INPUT_OUTPUT} 没变化，跳过 commit"
+          exit 0
+        fi
+
         LAST_MSG=$(git log -1 --pretty=%B 2>/dev/null || true)
-        if [[ "${{ inputs.no-amend }}" != "true" ]] \
-           && git diff --cached --quiet "${{ inputs.output-path }}" \
-           && git diff HEAD --quiet -- . ':(exclude)${{ inputs.output-path }}' \
-           && [[ "$LAST_MSG" == 💥*pixel-pulverizer* ]]; then
-          echo "🔄 amend 上一次 commit（仅更新 GIF）"
-          git commit --amend -m "$LAST_MSG"
+        OTHER_STAGED=$(git diff --cached --name-only -- . ":(exclude)${INPUT_OUTPUT}")
+        OTHER_UNSTAGED=$(git diff --name-only -- . ":(exclude)${INPUT_OUTPUT}")
+
+        # GIF 变了、且工作区没有别的改动、且上一个 commit 也是我们写的 → amend
+        if [ "${INPUT_NO_AMEND}" != "true" ] \
+           && [ -z "${OTHER_STAGED}" ] \
+           && [ -z "${OTHER_UNSTAGED}" ] \
+           && [[ "${LAST_MSG}" == 💥*pixel-pulverizer* ]]; then
+          echo "🔄 amend 上一次 commit（仅更新 ${INPUT_OUTPUT}）"
+          git commit --amend --no-edit
           git push --force-with-lease
-        elif ! git diff --cached --quiet; then
+        else
           echo "📝 新建 commit"
           git commit -m "💥 pixel-pulverizer: update ${GITHUB_RUN_ID}"
           git push
-        else
-          echo "ℹ️ ${ outputs.generate.output } 没变化，跳过 commit"
         fi
