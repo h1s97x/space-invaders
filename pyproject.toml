@@ -1,26 +1,39 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "gh-pixel-pulverizer"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Pixel Pulverizer — 把 GitHub 贡献图炸成像素 GIF，提交越多敌人越狠 💥"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "MIT"}
-authors = [{name = "pixel-pulverizer contributors"}]
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "h1s97x"}]
 dependencies = ["pillow>=10.0"]
 keywords = ["github", "contributions", "game", "gif", "pixel", "shooter", "hacktoberfest"]
 classifiers = [
     "Environment :: Console",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Games/Entertainment :: Arcade",
 ]
 
+[project.urls]
+Homepage = "https://github.com/h1s97x/gh-pixel-pulverizer"
+Issues = "https://github.com/h1s97x/gh-pixel-pulverizer/issues"
+
 [project.scripts]
 gh-pixel-pulverizer = "gh_pixel_pulverizer.cli:main"
+
+# 版本号的唯一来源是 gh_pixel_pulverizer/__init__.py，避免两处维护
+[tool.setuptools.dynamic]
+version = {attr = "gh_pixel_pulverizer.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["gh_pixel_pulverizer*"]
