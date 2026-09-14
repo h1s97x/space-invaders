@@ -1,0 +1,108 @@
+name: "gh-pixel-pulverizer"
+description: "💥 把 GitHub 贡献图炸成像素 GIF — 贡献越多敌人越狠"
+author: "h1s97x"
+
+branding:
+  icon: "zap"
+  color: "red"
+
+inputs:
+  github-token:
+    description: "GitHub token，用于拉取贡献图"
+    required: true
+  username:
+    description: "为谁生成 GIF（默认仓库 owner）"
+    required: false
+    default: ""
+  output-path:
+    description: "GIF 输出路径"
+    required: false
+    default: "game.gif"
+  strategy:
+    description: "攻击策略: column / row / random / chaos"
+    required: false
+    default: "random"
+  fps:
+    description: "帧率（25 = 40ms/帧，12 = 83ms/帧）"
+    required: false
+    default: "40"
+  max-frame:
+    description: "最大帧数"
+    required: false
+    default: "300"
+  boss-chance:
+    description: "高贡献格出 BOSS 的概率 (0~1)"
+    required: false
+    default: "0.18"
+  no-amend:
+    description: "是否关闭 amend 上一次 commit（默认自动 amend 避免污染历史）"
+    required: false
+    default: "false"
+  no-commit:
+    description: "完全跳过 commit/push，只生成文件留在 workspace"
+    required: false
+    default: "false"
+
+outputs:
+  output:
+    description: "生成的 GIF 路径"
+  frames:
+    description: "帧数"
+  score:
+    description: "最终得分"
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🐍 Check Python + Pillow
+      shell: bash
+      run: |
+        python3 -c "import PIL" 2>/dev/null || pip install --quiet pillow
+
+    - name: 💥 Generate GIF
+      id: generate
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GITHUB_USER: ${{ inputs.username }}
+      run: |
+        cd "${{ github.action_path }}"
+        python3 gh_pixel_pulverizer/cli.py \
+          "${{ inputs.username }}" \
+          -o "${{ inputs.output-path }}" \
+          -s "${{ inputs.strategy }}" \
+          --fps "${{ inputs.fps }}" \
+          --max-frame "${{ inputs.max-frame }}" \
+          --boss-chance "${{ inputs.boss-chance }}"
+
+        # 把结果 output 给后续 step
+        if [ -f "${{ inputs.output-path }}" ]; then
+          echo "output=${{ inputs.output-path }}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: 📦 Commit & Push (skip if disabled)
+      if: ${{ inputs.no-commit != 'true' }}
+      shell: bash
+      run: |
+        cd "${{ github.workspace }}"
+        git config user.name  "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        git add "${{ inputs.output-path }}"
+
+        # 如果只有这一个文件变更，且上一个 commit 也是我们写的 → amend
+        LAST_MSG=$(git log -1 --pretty=%B 2>/dev/null || true)
+        if [[ "${{ inputs.no-amend }}" != "true" ]] \
+           && git diff --cached --quiet "${{ inputs.output-path }}" \
+           && git diff HEAD --quiet -- . ':(exclude)${{ inputs.output-path }}' \
+           && [[ "$LAST_MSG" == 💥*pixel-pulverizer* ]]; then
+          echo "🔄 amend 上一次 commit（仅更新 GIF）"
+          git commit --amend -m "$LAST_MSG"
+          git push --force-with-lease
+        elif ! git diff --cached --quiet; then
+          echo "📝 新建 commit"
+          git commit -m "💥 pixel-pulverizer: update ${GITHUB_RUN_ID}"
+          git push
+        else
+          echo "ℹ️ ${ outputs.generate.output } 没变化，跳过 commit"
+        fi
