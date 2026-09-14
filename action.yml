@@ -27,13 +27,17 @@ inputs:
     required: false
     default: "40"
   max-frame:
-    description: "最大帧数"
+    description: "最大帧数，0 = 按靶子数量自动推算（保证能打完）"
     required: false
-    default: "300"
+    default: "0"
   boss-chance:
     description: "高贡献格出 BOSS 的概率 (0~1)"
     required: false
     default: "0.18"
+  colors:
+    description: "GIF 调色板颜色数，越少体积越小"
+    required: false
+    default: "32"
   seed:
     description: "固定随机种子（留空 = 每次随机）"
     required: false
@@ -83,6 +87,7 @@ runs:
         INPUT_FPS: ${{ inputs.fps }}
         INPUT_MAX_FRAME: ${{ inputs.max-frame }}
         INPUT_BOSS_CHANCE: ${{ inputs.boss-chance }}
+        INPUT_COLORS: ${{ inputs.colors }}
         INPUT_SEED: ${{ inputs.seed }}
       run: |
         cd "${{ github.action_path }}"
@@ -99,6 +104,7 @@ runs:
           --fps "${INPUT_FPS}" \
           --max-frame "${INPUT_MAX_FRAME}" \
           --boss-chance "${INPUT_BOSS_CHANCE}" \
+          --colors "${INPUT_COLORS}" \
           "${EXTRA[@]}"
 
     - name: 📦 Commit & Push (skip if disabled)
