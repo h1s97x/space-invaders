@@ -23,9 +23,9 @@ inputs:
     required: false
     default: "random"
   fps:
-    description: "帧率（25 = 40ms/帧，12 = 83ms/帧）"
+    description: "播放帧率（20 = 50ms/帧，12 = 83ms/帧；只影响播放快慢，不影响体积）"
     required: false
-    default: "40"
+    default: "20"
   max-frame:
     description: "最大帧数，0 = 按靶子数量自动推算（保证能打完）"
     required: false
@@ -97,7 +97,7 @@ runs:
           EXTRA=(--seed "${INPUT_SEED}")
         fi
 
-        python3 gh_pixel_pulverizer/cli.py \
+        python3 -m gh_pixel_pulverizer \
           "${INPUT_USERNAME}" \
           -o "${INPUT_OUTPUT}" \
           -s "${INPUT_STRATEGY}" \
