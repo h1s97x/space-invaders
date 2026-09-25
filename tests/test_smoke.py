@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from PIL import Image  # noqa: E402
 
-from gh_pixel_pulverizer.cli import (  # noqa: E402
+from gh_pixel_pulverizer import (  # noqa: E402
     COLS,
     HEIGHT,
     ROWS,
