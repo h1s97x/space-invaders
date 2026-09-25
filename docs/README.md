@@ -32,6 +32,7 @@
 | [05-running.md](./05-running.md) | 本地运行、CLI 参数、pip 安装、GitHub Action 接入、调参指南 |
 | [06-testing-and-ci.md](./06-testing-and-ci.md) | 测试策略、用例清单、CI 流水线、本地复现命令 |
 | [07-design-decisions.md](./07-design-decisions.md) | 设计决策（含踩过的坑）、已知限制与改进建议 |
+| [08-competitive-analysis.md](./08-competitive-analysis.md) | 对标 gh-space-shooter 的差距根因分析与改进路线图 |
 
 ---
 
