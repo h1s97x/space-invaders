@@ -35,18 +35,30 @@
                      *.gif + stdout + $GITHUB_OUTPUT
 ```
 
-### 1.1 为什么是「单文件」？
+### 1.1 为什么拆成包？
 
-`cli.py` 868 行承载了全部逻辑。这不是疏忽，而是**刻意的产品决策**：
-README 提供的「不用 Action、自己拼脚本」用法是让用户 `curl` 单个 `cli.py` 下来直接跑：
+历史版本里 `cli.py` 868 行承载了全部逻辑：常量、数据结构、抓数据、引擎、渲染、编码、CLI。
+想改「格子圆角」要在 300 行玩法代码之间翻找绘制函数，改「穿透数」又要穿过 8 个 `_draw_*`。
+现在按职责拆成 **7 个模块**（见下表），最大的 `engine.py` 也只有 368 行。
 
-```yaml
-curl -sSL .../gh_pixel_pulverizer/cli.py -o pixel_pulverizer.py
-python pixel_pulverizer.py "$REPO_OWNER" -o game.gif
-```
+| 模块 | 行数 | 职责 | 是否碰 PIL |
+|------|------|------|-----------|
+| `config.py` | 119 | 调色板 / 几何 / 可调参数 | 否 |
+| `font.py` | 123 | 自绘 5×7 点阵字体 + `text_width()` | 否 |
+| `models.py` | 92 | 7 个 dataclass + `Strategy` | 否 |
+| `data.py` | 101 | GraphQL 抓取 + 假数据 | 否 |
+| `engine.py` | 391 | 状态机 / 每帧更新 / 碰撞 / 主循环 | **否** |
+| `render.py` | 280 | `Renderer`：只读消费 Engine 状态（像素风） | 是 |
+| `gif.py` | 69 | 共享调色板 + 逐帧量化 + 编码 | 是 |
+| `cli.py` | 109 | argparse + 串流程 | 否 |
 
-因此 **`cli.py` 必须保持「零包内相对导入」**（它只用标准库 + PIL，`main()` 可直接脚本执行）。
-拆分模块会让这条「单文件 standalone」用法失效 —— 这是做重构前必须知道的约束。
+拆分换来的一条硬边界：**`engine.py` 一行 PIL 都不 import**。
+调玩法只碰 `engine.py` + `config.py`，调观感只碰 `render.py` + `config.py`，互不干扰。
+
+> **代价**：原先「`curl` 单个 `cli.py` 下来直接跑」的用法失效了（它依赖零包内导入）。
+> 现已改为 `pip install "gh-pixel-pulverizer @ git+https://github.com/h1s97x/gh-pixel-pulverizer.git"`
+> + 命令行 `gh-pixel-pulverizer <args>`；Action 内部则从
+> `python3 gh_pixel_pulverizer/cli.py` 改为 `python3 -m gh_pixel_pulverizer`。
 
 ---
 
@@ -74,7 +86,7 @@ python pixel_pulverizer.py "$REPO_OWNER" -o game.gif
 ```
 
 由 GraphQL 响应组装，注意**越界防御**：只取前 `COLS` 周，且 `0 <= weekday < ROWS` 才写入
-（`cli.py:227-232`）。
+（`data.py`）。
 
 ### 3.2 矩阵 → 靶子：分位数分档
 
@@ -97,11 +109,11 @@ level  = 1 if frac<0.25  else 2 if frac<0.50  else
 > 导致 level 4 与 level 5 的实际边长**同为 16**，视觉上无法用大小区分，只能靠颜色 + 皇冠条。
 
 中心化定位：`x = PADDING_LR + c*(CELL+GAP) + (CELL - size)//2`，使放大的格子在网格内居中而不越界
-（`cli.py:344-345`）。
+（`engine.py`）。
 
 ### 3.3 帧循环
 
-`Engine.iter_frames()`（`cli.py:711-744`）每帧严格按此顺序执行：
+`Engine.iter_frames()`（`engine.py`）每帧严格按此顺序执行：
 
 ```
 1. _update_stars()        星空滚动（含到底重生）
@@ -159,7 +171,7 @@ y │   0 ┌──────────────────────�
    │ 230 └────────────────────────────────────────────────────┘
 ```
 
-### 4.1 派生尺寸常量（`cli.py:58-101`）
+### 4.1 派生尺寸常量（`config.py`）
 
 | 常量 | 值 | 推导 |
 |------|-----|------|
@@ -172,33 +184,40 @@ y │   0 ┌──────────────────────�
 | `SHIP_Y` | 193 | `GRID_BOTTOM + 70`；刻意上移 10px，避免尾焰压住 y=222 的进度条 |
 | `HEIGHT` | 230 | 硬编码，对齐原稿 |
 
-> **注意**：`WIDTH` 先算得 `793 + 34*2 = 861`，随后被**硬覆盖为 860**（`cli.py:71-72`），
+> **注意**：`WIDTH` 先算得 `793 + 34*2 = 861`，随后被**硬覆盖为 860**（`config.py`），
 > 并把 `PADDING_LR` 改为 33。这一「先算后改」是为了像素级对齐参考稿，改动坐标系统时别漏看。
 
 ---
 
 ## 5. 渲染管线（绘制顺序即 z-order）
 
-`_render_frame()`（`cli.py:696-709`）的顺序是**不允许随意调换**的：
+`_render_frame()` 的顺序是**不允许随意调换**的：
 
 ```python
-img = Image.new("RGB", (WIDTH, HEIGHT), BG)      # 1. 背景
-d = ImageDraw.Draw(img)
-self._draw_grid_bg(d)      # 2. 贡献图底板 + 网格线
-self._draw_stars(d)        # 3. 3 层视差星空
+base    = Image.new("RGB", (WIDTH, HEIGHT), BG)          # 1. 不透明背景
+overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0,0,0,0))  # 2. 透明实体图层
+d = ImageDraw.Draw(overlay, "RGBA")                      #    ← 所有 fill 都是 (r,g,b,a)
+self._draw_grid_bg(d)      # 3. 贡献图底板 + 网格线
+self._draw_stars(d)        # 4. 3 层视差星空
 if not celebration:
-    self._draw_targets(d)  # 4. 靶子（含皇冠、未爆标记）
-    self._draw_enemies(d)  # 5. BOSS
-    self._draw_bullets(d)  # 6. 子弹（区分敌我颜色）
-self._draw_ship(d)         # 7. 飞船（两翼→机身→舱→尾焰）
-self._draw_particles(d)    # 8. 粒子（按寿命做亮度衰减）
-self._draw_hud(d)          # 9. HUD（分数/击败数/用户名/帧号/生命条）
+    self._draw_targets(d)  # 5. 靶子（圆角 + 受伤降档配色 + 皇冠）
+    self._draw_enemies(d)  # 6. BOSS
+    self._draw_bullets(d)  # 7. 子弹（含 3 段 alpha 拖尾）
+self._draw_ship(d)         # 8. 飞船（半透明两翼→机身→舱→三层尾焰）
+self._draw_particles(d)    # 9. 粒子（真·淡出：alpha = 255·fade²）
+self._draw_hud(d)          # 10. HUD（分数/击败数/用户名/帧号/生命条）
+return Image.alpha_composite(base.convert("RGBA"), overlay).convert("RGB")
 ```
+
+> **为什么必须走 RGBA 图层**：GIF 只支持 1 位透明（全透/不透），没有半透明，
+> 所以 alpha 必须在「合成到背景」这一步消耗掉。直接把 RGB 乘向黑色是「伪透明」，
+> 会在星空/网格上留下一块块深色脏斑。
+> 合成完回到 RGB，编码层（共享调色板 / quantize / 无 disposal）**完全不受影响**。
 
 两条隐性约束：
 
 1. **`_draw_grid_bg` 必须在 `_draw_stars` 之前**：网格底板是不透明的整块矩形，若顺序颠倒会把整片星空盖掉。
-2. **celebration 帧跳过 4/5/6**：通关动画只保留星空、飞船、粒子与 HUD，让烟花成为唯一主角。
+2. **celebration 帧跳过 5/6/7**：通关动画只保留星空、飞船、粒子与 HUD，让烟花成为唯一主角。
 
 ---
 
@@ -214,7 +233,7 @@ self._draw_hud(d)          # 9. HUD（分数/击败数/用户名/帧号/生命�
 **这是不可回退的设计**：把 `iter_frames()` 改写成返回 `list` 会直接让 CI 内存紧张。
 
 > 补充事实：`encode_gif()` 内部仍会把量化后的帧 `append` 进 `quantized` 列表
-> （`cli.py:794-796`），因为 Pillow 的 `save_all` 需要一个完整序列。
+> （`gif.py`），因为 Pillow 的 `save_all` 需要一个完整序列。
 > 它只节流了「RGB → P」这一步的重量级内存，并非真正的零拷贝流式写出。详见 [07](./07-design-decisions.md#22-已知限制)。
 
 ### 6.2 GIF 体积
@@ -227,7 +246,7 @@ self._draw_hud(d)          # 9. HUD（分数/击败数/用户名/帧号/生命�
 |------|------|------|
 | **帧数**（最有效） | `--max-frame 180` | 线性下降；但可能打不完、看不到通关烟花 |
 | **色数** | `--colors 16` | 线性下降；像素画几乎无感（`_clamp_colors` 限幅在 2..256） |
-| **粒子数** | 改 `cli.py:_explode` 的 `n` | 全屏散布粒子会撑大每帧脏矩形；砍半粒子 ≈ 省 25% |
+| **粒子数** | 改 `engine.py:_explode` 的 `n` | 全屏散布粒子会撑大每帧脏矩形；砍半粒子 ≈ 省 25% |
 
 默认已做的两件事（**不要反向改动**）：
 

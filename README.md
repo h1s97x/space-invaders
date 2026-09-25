@@ -24,8 +24,9 @@
 | 🔥 **动态飞船** | 剩余敌占比 < 45% 自动开三发散射；尾焰随战况变化 |
 | 🎲 **4 种策略** | `column` / `row` / `random` / `chaos`（先揍最狠的） |
 | 🌌 **3 层视差星空** | 远近决定速度与亮度，像素感拉满 |
+| 🌈 **真 alpha 渲染** | 粒子 / 子弹拖尾 / 尾焰走 RGBA 图层合成，真·淡出而非变黑块 |
 | 📡 **离线兜底** | 没 token 自动生成模拟贡献图（工作日高产、周末摸鱼） |
-| 🧩 **只有一个依赖** | 纯 Python + `pillow`，核心逻辑就一个文件 |
+| 🧩 **只有一个依赖** | 纯 Python + `pillow`，逻辑按职责拆成 6 个模块（config / models / data / engine / render / gif） |
 | ✅ **自带测试与 CI** | 全离线可跑：`python -m unittest discover -s tests` |
 
 ## 🎮 演示
@@ -88,12 +89,13 @@ python -m unittest discover -s tests
 | `username` | 见下 | GitHub 用户名；省略时依次取 `GITHUB_USER` → `GITHUB_REPOSITORY_OWNER` → `octocat` |
 | `-o, --output` | `game.gif` | 输出路径 |
 | `-s, --strategy` | `random` | `column` / `row` / `random` / `chaos` |
-| `--fps` | `40` | 帧率（只决定播放快慢，不改变体积） |
+| `--fps` | `20` | 播放帧率（只决定播放快慢，不改变体积；帧数不变） |
 | `--max-frame` | `0`（自动） | 帧数上限；`0` = 按靶子血量自动推算，保证能打到通关动画 |
 | `--colors` | `32` | GIF 调色板色数，越小体积越小 |
 | `--offline` | `false` | 不用 API，跑假数据 |
 | `--seed` | 随机 | 固定随机种子（假数据与整局过程完全可复现） |
 | `--boss-chance` | `0.18` | 高贡献格出 BOSS 的概率 |
+| `--fire-interval` | `2` | 掠过新列时的最小开火间隔（越大射速越慢，也会拉长清场帧数与体积） |
 
 ## 🔌 接入 GitHub Profile README
 
@@ -151,10 +153,9 @@ Action 会生成 GIF 并顺手帮你提交：默认会 **amend** 上一次自己
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO_OWNER: ${{ github.repository_owner }}
         run: |
-          python -m pip install --quiet --break-system-packages pillow
-          curl -sSL https://raw.githubusercontent.com/h1s97x/gh-pixel-pulverizer/main/gh_pixel_pulverizer/cli.py \
-               -o pixel_pulverizer.py
-          python pixel_pulverizer.py "$REPO_OWNER" -o game.gif --fps 12 --colors 24
+          python -m pip install --quiet --break-system-packages \
+            "gh-pixel-pulverizer @ git+https://github.com/h1s97x/gh-pixel-pulverizer.git"
+          gh-pixel-pulverizer "$REPO_OWNER" -o game.gif --fps 12 --colors 24
 
       - name: 📦 Commit if changed
         run: |
@@ -181,23 +182,39 @@ Action 会生成 GIF 并顺手帮你提交：默认会 **amend** 上一次自己
 |--------|------|------|
 | 减帧 | `--max-frame 180` | 最有效，但可能打不完、看不到通关烟花 |
 | 减色 | `--colors 16` | 线性见效，像素画几乎看不出差别 |
-| 减粒子 | 改 `cli.py` 里 `_explode` 的粒子数 | 全屏粒子是每帧差分区域变大的主因 |
+| 减粒子 | 改 `engine.py` 里 `_explode` 的粒子数 | 全屏粒子是每帧差分区域变大的主因 |
 
 已经默认做了的两件事：**关掉调色板抖动**、**不指定 `disposal=2`**（后者会强制每帧全量编码，
-实测体积直接翻倍）。默认参数下跑 3 个不同用户的数据，实测约 320~480 帧、2.8~3.3 MB，
-峰值内存约 230 MB。
+实测体积直接翻倍）。默认参数（`random` 策略）下实测约 700~830 帧（35~42s）、1.8~2.1 MB，
+峰值内存约 230 MB。帧数比旧版（约 480 帧）高，是因为飞船不再是匀速直线扫荡 ——
+随机选目标必然让路径变长，这一段差价买的是「有起伏、不像节拍器」的观感。
 
 ## 🏗️ 架构
 
 ```
 gh_pixel_pulverizer/
-├── cli.py          # 全部逻辑：API 抓取 + 游戏循环 + PIL 渲染
+├── __init__.py     # 版本号唯一来源 + 公共 API 统一导出
 ├── __main__.py     # python -m 入口
-└── __init__.py     # 版本号唯一来源
+├── cli.py          # 参数解析 + 串流程（唯一的「胶水」）
+├── config.py       # 常量：调色板 / 几何 / 可调参数
+├── font.py         # 自绘 5×7 点阵字体（硬边，不用 PIL 默认位图字体）
+├── models.py       # 数据结构：Target / Enemy / Bullet / Particle / Flash / Star / Strategy
+├── data.py         # GitHub GraphQL 抓取 + 离线假数据
+├── engine.py       # 玩法：状态机、每帧更新、碰撞、主循环
+├── render.py       # 画面：Renderer，只读消费 Engine 状态
+└── gif.py          # 编码：共享调色板 + 逐帧量化
 tests/
 └── test_smoke.py   # 离线冒烟测试（18 例）
 .github/workflows/
 ├── ci.yml          # 跑测试 + 端到端生成 GIF
+```
+
+依赖是单向的，`engine.py` 一行 PIL 都不 import（画什么全交给 `render.py`）：
+```
+cli.py ─┬─▶ data.py   ──▶ models.py ──▶ config.py
+        ├─▶ engine.py ──┬─▶ models.py
+        │               └─▶ render.py ──▶ config.py ──▶ font.py
+        └─▶ gif.py    ──────────────────▶ config.py
 ```
 
 数据流：

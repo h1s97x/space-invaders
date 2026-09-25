@@ -48,16 +48,17 @@ python -m pip install -e .
 
 > `.gitignore` 已忽略 `.venv/`。
 
-### 2.4 免安装「单文件」用法
+### 2.4 免克隆安装（从 git 直接装）
 
-`cli.py` 不 import 同包任何模块，因此可以单独下载运行：
+拆分后不再支持「curl 单个 `cli.py` 直跑」（它依赖零包内导入），改为从 git 安装：
 
 ```bash
-python -m pip install pillow
-curl -sSL https://raw.githubusercontent.com/h1s97x/gh-pixel-pulverizer/main/gh_pixel_pulverizer/cli.py \
-     -o pixel_pulverizer.py
-python pixel_pulverizer.py "$USERNAME" -o game.gif --fps 12 --colors 24
+python -m pip install --break-system-packages \
+  "gh-pixel-pulverizer @ git+https://github.com/h1s97x/gh-pixel-pulverizer.git"
+gh-pixel-pulverizer "$USERNAME" -o game.gif --fps 12 --colors 24
 ```
+
+> 依赖仍然只有 pillow，会自动一起装上。
 
 ---
 
@@ -68,8 +69,10 @@ python pixel_pulverizer.py "$USERNAME" -o game.gif --fps 12 --colors 24
 ```bash
 python -m gh_pixel_pulverizer <args>          # 源码目录内
 gh-pixel-pulverizer <args>                    # pip install -e . 之后
-python gh_pixel_pulverizer/cli.py <args>      # 脚本直跑（Action 用的这种）
+python -m gh_pixel_pulverizer <args>          # Action 用的就是这种
 ```
+
+> 注：`python gh_pixel_pulverizer/cli.py` 直跑在拆分后已不可用（需要包上下文解析相对导入）。
 
 ### 3.2 参数完整表
 
@@ -78,7 +81,7 @@ python gh_pixel_pulverizer/cli.py <args>      # 脚本直跑（Action 用的这�
 | `username` | 位置参数，可选 | 见 §3.3 | GitHub 用户名 |
 | `-o, --output` | str | `game.gif` | GIF 输出路径 |
 | `-s, --strategy` | `column`/`row`/`random`/`chaos` | `random` | 攻击策略 |
-| `--fps` | int | `40` | 帧率。**只决定播放快慢，不改变体积**（帧数不变，仅每帧时长变） |
+| `--fps` | int | `20` | 播放帧率。**只决定播放快慢，不改变体积**（帧数不变，仅每帧时长变；20fps = 50ms/帧，动作更从容可读） |
 | `--max-frame` | int | `0` | 帧数上限；`0` = 按总 HP 自动推算（保证能打完） |
 | `--offline` | flag | `False` | 强制假数据 |
 | `--seed` | int | 随机 | 固定随机种子 → 整局过程完全可复现 |
@@ -238,10 +241,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO_OWNER: ${{ github.repository_owner }}
         run: |
-          python -m pip install --quiet --break-system-packages pillow
-          curl -sSL https://raw.githubusercontent.com/h1s97x/gh-pixel-pulverizer/main/gh_pixel_pulverizer/cli.py \
-               -o pixel_pulverizer.py
-          python pixel_pulverizer.py "$REPO_OWNER" -o game.gif --fps 12 --colors 24
+          python -m pip install --quiet --break-system-packages \
+            "gh-pixel-pulverizer @ git+https://github.com/h1s97x/gh-pixel-pulverizer.git"
+          gh-pixel-pulverizer "$REPO_OWNER" -o game.gif --fps 12 --colors 24
 
       - name: 📦 Commit if changed
         run: |
@@ -295,7 +297,7 @@ jobs:
 |------|------|
 | `--boss-chance 0.35` | BOSS 更频繁，画面更热闹（也会拉长帧数） |
 | `-s chaos` | 先揍最亮的格子，节奏感更强 |
-| `--fps 25~40` | 动作更顺滑（文件体积不变） |
+| `--fps 40` | 动作更快更紧凑（文件体积不变）；默认 20 偏从容 |
 | `--colors 64+` | 渐变更细腻（星空衰减更平滑），体积上升 |
 
 ### 7.3 目标：可复现 / 做回归基准

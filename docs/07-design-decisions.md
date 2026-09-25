@@ -7,13 +7,20 @@
 
 ## 1. 关键设计决策（ADR 摘要）
 
-### ADR-1：`cli.py` 保持单文件、零包内导入
+### ADR-1：拆成 7 个模块，且 `engine.py` 不碰 PIL（取代旧的「单文件」决策）
 
-- **决策**：全部逻辑集中在一个 `cli.py`，且不使用 `from .xxx import` / `from gh_pixel_pulverizer.xxx import`。
-- **理由**：README 与 `action.yml` 都提供了「`curl` 单个文件下来直接 `python xxx.py` 跑」的用法，
-  这是项目的核心分发优势之一（`__main__.py` 相对地使用了包导入，因此不具备此特性）。
-- **代价**：单文件 868 行，职责较多。
-- **反向指引**：若要拆分模块，必须同时提供 standalone 打包方案或放弃该用法。
+- **决策**：`config / models / data / engine / render / gif / cli` 七个模块，
+  `engine.py` 只管玩法、`render.py` 只管画面，边界是 `Renderer(game)` 单向读取。
+- **理由**：原 `cli.py` 868 行把常量、数据结构、抓数据、引擎、渲染、编码、CLI 混在一起，
+  改「格子圆角」要在 300 行玩法代码之间翻找。拆分后最大模块 368 行，
+  且**调玩法与调观感不再互相踩脚**。
+- **代价**：放弃了「curl 单个 `cli.py` 直跑」的用法（它依赖零包内导入）。
+  替代方案：`pip install "gh-pixel-pulverizer @ git+..."` + console script；
+  Action 内部改为 `python3 -m gh_pixel_pulverizer`。
+- **兼容性**：`cli.py` 仍 re-export 旧符号，`from gh_pixel_pulverizer.cli import X` 不破；
+  包根 `__init__.py` 统一导出公共 API。
+- **守护**：拆分是纯移动，不改任何行为 —— 验收标准是同一 seed 下 GIF 的
+  **md5 与拆分前逐字节一致**。
 
 ---
 
@@ -146,11 +153,11 @@ def iter_frames(self, verbose=True) -> Iterator[Image.Image]:
 
 | # | 位置 | 问题 | 影响 |
 |---|------|------|------|
-| 1 | `cli.py:40` | `GR_L0 = (33, 38, 45)` **定义后从未使用** | 无害；属于可清理的死常量 |
-| 2 | `cli.py:71-72` | `WIDTH` 先算成 861 再硬写 `860`，注释「硬对齐原始」 | 坐标系统含一份隐性魔数；改布局时容易漏看 |
-| 3 | `cli.py:69 / 76` | `PADDING = 34` 被 `PADDING_LR = 33` 取代，前者已无用 | 命名易混淆 |
-| 4 | `cli.py:668` | `int(v * alpha + 0 * (1 - alpha))` 中 `0 * (1-alpha)` 恒为 0，冗余 | 无害，可读性略差 |
-| 5 | `cli.py:674` | `ImageFont.load_default()` **每帧调用**（400 帧 = 400 次） | 轻微性能损耗；提到模块级或 `lru_cache` 即可 |
+| 1 | `config.py` | `GR_L0 = (33, 38, 45)` **定义后从未使用** | 无害；属于可清理的死常量 |
+| 2 | `config.py` | `WIDTH` 先算成 861 再硬写 `860`，注释「硬对齐原始」 | 坐标系统含一份隐性魔数；改布局时容易漏看 |
+| 3 | `config.py / 76` | `PADDING = 34` 被 `PADDING_LR = 33` 取代，前者已无用 | 命名易混淆 |
+| 4 | ~~`engine.py`~~ | ~~`int(v * alpha + 0 * (1 - alpha))` 冗余写法~~ | ✅ 已随 RGBA 渲染重构移除（改为 `_rgba(p.color, alpha)` 真淡出） |
+| 5 | `engine.py` | `ImageFont.load_default()` **每帧调用**（400 帧 = 400 次） | 轻微性能损耗；提到模块级或 `lru_cache` 即可 |
 | 6 | 碰撞判定 | 用**点**判定（子弹单点 vs 矩形），子弹速度 `-5.0` 会跳过高速下的小目标；飞船撞 BOSS 子弹用的是近似矩形 | 当前格子 ≥13px 暂不触发；改高 `BULLET_PIERCE` 速度时需留意隧穿 |
 | 7 | `Bullet.max_hits` | 敌方子弹创建时不传 `max_hits`（保持默认 1）但从未被使用 | 语义噪声 |
 | 8 | `celebration` 帧 | 内部循环不再递增 `self.frame` → HUD 帧号停住 | 无害，属观感细节 |
@@ -159,7 +166,7 @@ def iter_frames(self, verbose=True) -> Iterator[Image.Image]:
 
 | # | 限制 | 说明 / 影响 | 建议 |
 |---|------|-------------|------|
-| 1 | **`encode_gif` 并非真·流式写出** | 尽管 docstring 强调「RGB 原帧用完即丢」，实现里仍把所有**量化后**帧 `append` 进 `quantized` 列表（`cli.py:794-796`），因为 Pillow 的 `save_all=True` 需要完整序列。它只把峰值从「RGB 全驻留」降到「约 1/3」 | 若需真正流式，可考虑 `imageio` 的 writer 或手工写 GIF 字节流 |
+| 1 | **`encode_gif` 并非真·流式写出** | 尽管 docstring 强调「RGB 原帧用完即丢」，实现里仍把所有**量化后**帧 `append` 进 `quantized` 列表（`gif.py`），因为 Pillow 的 `save_all=True` 需要完整序列。它只把峰值从「RGB 全驻留」降到「约 1/3」 | 若需真正流式，可考虑 `imageio` 的 writer 或手工写 GIF 字节流 |
 | 2 | **level 4 与 level 5 视觉同尺寸** | `size = min(CELL+level-1, CELL+GAP+1)` 使两者都为 16px，只能靠颜色 + 皇冠条区分 | 想进一步区分可放宽 `size` 上限或给 level 5 加描边 |
 | 3 | **无 `--version` 参数** | 用户无法从 CLI 查版本 | 可从 `__init__.__version__` 注入 argparse |
 | 4 | **CI 未覆盖联网成功路径** | `fetch_contributions` 的 200 成功分支从未在 CI 执行 | 用录制回放（vcrpy）或本地 HTTP stub |
@@ -175,8 +182,9 @@ def iter_frames(self, verbose=True) -> Iterator[Image.Image]:
 4. **给 `fetch_contributions` 补「成功路径」测试**（本地 stub 或录制回放）。
 5. **CI 增加一步 `pip install .` + `gh-pixel-pulverizer --help`** —— 守护打包元数据与 console script。
 6. **为 `action.yml` 增加自检 workflow**（`uses: ./`）或引入 `act`。
-7. **若做较大重构**：先将 `cli.py` 拆分为 `config.py / model.py / api.py / engine.py / renderer.py / encoder.py / cli.py`，
-   并**同时**提供 standalone 打包脚本，避免切断「单文件 curl」用法。
+7. ~~**若做较大重构**：先将 `cli.py` 拆分为多个模块~~ —— **已完成**（见 ADR-1）：
+   `config / models / data / engine / render / gif / cli`，验收标准是同 seed 下 GIF 的 md5 与拆分前一致。
+   下一步可考虑：把 `ImageFont.load_default()` 提到模块常量、给抓取成功路径补测试。
 
 ---
 
@@ -189,7 +197,9 @@ def iter_frames(self, verbose=True) -> Iterator[Image.Image]:
 ✗ 让 fetch_contributions() 抛出异常而非返回 None
 ✗ 给 encode_gif() 加上 disposal=2
 ✗ 重新给 quantize 打开抖动
-✗ 给 cli.py 加入任何同包 import（会破坏 standalone 运行）
+✗ 让 engine.py import PIL（玩法与绘制必须分离，绘制只在 render.py）
+✗ 在 render.py 里修改游戏状态（Renderer 必须只读地消费 Engine）
+✗ 让 config.py import 任何包内模块（它必须是依赖图的叶子，否则必成环）
 ✗ 在 action.yml 的 run: 里直接内插 ${{ inputs.* }} 或 ${{ github.event.* }}
 ✗ 放宽 netdev setTimeout > 15s 或移除超时（Action 会长时间挂起）
 ✗ 给更多 level 加 HP（会显著推高清场帧数与 GIF 体积），除非同步调大 max_frame

@@ -12,7 +12,9 @@ gh-pixel-pulverizer 的运行时依赖只有一个：pillow。
 这个约束直接服务于项目的两大分发形态：
 
 1. **GitHub Actions 里零成本启动** —— runner 自带 Python，只需补一个 Pillow；
-2. **单文件 curl 即用** —— 用户下载 `cli.py` 后 `pip install pillow` 就能跑。
+2. **pip 装完即用** —— `pip install "gh-pixel-pulverizer @ git+https://github.com/h1s97x/gh-pixel-pulverizer.git"`
+   后 `gh-pixel-pulverizer <args>` 直接跑（拆分前是「curl 单个 `cli.py`」，
+   该用法依赖零包内导入，拆包后已改为 pip 安装）。
 
 ---
 
@@ -28,7 +30,7 @@ gh-pixel-pulverizer 的运行时依赖只有一个：pillow。
 dependencies = ["pillow>=10.0"]
 ```
 
-**Pillow 使用面**（`cli.py:33`）：
+**Pillow 使用面**（`config.py`）：
 
 | Pillow 对象 | 使用位置 | 用途 |
 |-------------|----------|------|
@@ -67,11 +69,11 @@ build-backend = "setuptools.build_meta"
 
 ## 3. 标准库依赖清单
 
-`cli.py` 的 import（`cli.py:20-33`）：
+全包标准库 import 汇总（分散在 7 个模块里，括号内为主要使用模块）：
 
 | 模块 | 用途 | 关键使用点 |
 |------|------|-----------|
-| `argparse` | CLI 参数解析 | `main()` |
+| `argparse` | CLI 参数解析 | `cli.main()` |
 | `bisect` | **分位数查表** | `_build_targets.level_of()`：`bisect_left(counts, count)` |
 | `json` | GraphQL 请求体序列化 / 响应解析 | `fetch_contributions()` |
 | `math` | 三角函数（`sin`/`cos`/`radians`）、`pi` | 爆炸方向、BOSS 横摆、尾焰抖动 |
@@ -89,7 +91,7 @@ build-backend = "setuptools.build_meta"
 
 | 未使用 | 原因（推测） |
 |--------|--------------|
-| `requests` | 非标准库，破坏「零依赖即刻可用」与 `curl` 单文件运行 |
+| `requests` | 非标准库，破坏「唯一依赖是 pillow」这条底线（`urllib.request` 足够） |
 | `numpy` | 纯 CPU 像素绘制规模极小，无需向量化；省去重依赖 |
 | `click` / `typer` | 项目只需 9 个简单 flag，`argparse` 足够且零依赖 |
 | `pytest` | 保持 `python -m unittest discover` 全版本可跑，无安装门槛 |
@@ -139,23 +141,33 @@ requires-python = ">=3.9"
                              │   ▼    └───────────┬───────────┘
                              │  ┌─────────────────▼─────────────────┐
                              └─▶│            cli.py                 │
-                                │  ① 常量 ② 常量 ③ 数据结构          │
-                                │  ④ 数据获取 ⑤ Engine ⑥ 编码 ⑦ CLI │
+                                │  只做参数解析 + 串流程              │
                                 └─────────────────┬─────────────────┘
-                                                  │ import
-                                    ┌─────────────┴─────────────┐
-                                    ▼                           ▼
-                          ┌──────────────────┐      ┌────────────────────┐
-                          │ 标准库 (13 个)   │      │  PIL (pillow>=10)  │
-                          └──────────────────┘      └────────────────────┘
+                                                  │ from .xxx import
+                     ┌───────────────┬────────────┼─────────────┐
+                     ▼               ▼            ▼             ▼
+              ┌──────────┐   ┌───────────┐  ┌─────────┐  ┌──────────┐
+              │ data.py  │   │ engine.py │  │ gif.py  │  │ config.py│
+              └────┬─────┘   └─────┬─────┘  └────┬────┘  └────▲─────┘
+                   │               ▼             │            │
+                   │        ┌────────────┐       │            │
+                   │        │ render.py  │───────┴────────────┘
+                   │        └──────┬─────┘
+                   ▼               ▼
+          ┌──────────────────┐  ┌────────────────────┐
+          │ 标准库 (13 个)   │  │  PIL (pillow>=10)  │
+          └──────────────────┘  └────────────────────┘
+                                  ↑ 只有 render.py / gif.py 用
 ```
 
-**重要性质：`cli.py` 不 import 同包内任何模块**（即不使用 `from .xxx import` 或 `from gh_pixel_pulverizer.xxx import`）。
-这保证它可以被单独下载并以脚本方式运行（`action.yml` 的 step ② 就是这么干的）。
+**重要性质**：
 
-> ⚠️ 反例：`__main__.py` 使用了相对/绝对包导入 `from gh_pixel_pulverizer.cli import main`，
-> 因此**只有 `cli.py` 是 standalone 的**。若要把更多逻辑迁移出 `cli.py`，项目必须先放弃
-> README 里「curl 单文件」的用法，或为 standalone 场景提供一个打包脚本。
+1. `config.py` 是依赖图的叶子 —— 不 import 任何包内模块，谁都能安全引用。
+2. **只有 `render.py` 与 `gif.py` 会 import PIL**；`engine.py` 完全不碰图像库。
+3. `render.py` 只在 `TYPE_CHECKING` 下引用 `Engine`，运行时不 import `engine.py`，
+   所以 `engine → render` 这条边不会形成循环。
+4. 拆分后**不再支持** `python gh_pixel_pulverizer/cli.py` 直跑（需要包上下文），
+   统一用 `python -m gh_pixel_pulverizer` 或安装后的 console script。
 
 ---
 
@@ -184,8 +196,8 @@ requires-python = ">=3.9"
 
 形态 C  Actions 复用    uses: h1s97x/gh-pixel-pulverizer@main
                           └─ action.yml step ②: cd $GITHUB_ACTION_PATH
-                                                python3 gh_pixel_pulverizer/cli.py <args>
-                             （直接执行 cli.py 的 __main__ 分支）
+                                                python3 -m gh_pixel_pulverizer <args>
+                             （走 __main__.py → cli.main()）
 ```
 
 三者最终都汇聚到同一个 `cli.main()`，行为完全一致。

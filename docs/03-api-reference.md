@@ -1,12 +1,14 @@
 # 03 · API 参考
 
-> 所有行号对应当前仓库代码。`cli.py` 中标记 `_`-前缀的方法为内部实现，外部不应依赖。
+> 行号为 0.2.0 版快照；自「RGBA 渲染管线」重构后有约 ±40 行漂移，**以符号名为准**。
+> 各模块中标记 `_`-前缀的函数/方法为内部实现，外部不应依赖。
+> 公开 API 一律从包根导出：`from gh_pixel_pulverizer import Engine, generate_dummy, ...`。
 
 ---
 
 ## 1. 常量
 
-### 1.1 调色板（`cli.py:36-55`）
+### 1.1 调色板（`config.py`）
 
 | 常量 | RGB | 用途 |
 |------|-----|------|
@@ -34,7 +36,7 @@
 > 飞船舱 `(180,220,255)`、命中特效 `(255,100,60)`、低血量进度条 `(255,120,80)`、
 > 生命条底 `(45,50,60)`、白色火花环 `(255,255,255)`。
 
-### 1.2 几何与可调参数（`cli.py:58-101`）
+### 1.2 几何与可调参数（`config.py`）
 
 | 常量 | 值 | 含义 / 影响 |
 |------|-----|------------|
@@ -50,14 +52,18 @@
 | `SHIP_Y` | 193 | 飞船基准 y（已上移 10px 避免压住底部 HUD） |
 | `SHIP_W` / `SHIP_H` | 32 / 22 | 飞船尺寸 |
 | `STAR_SPEEDS` | `[0.70, 0.35, 0.15]` | z=0..2 三层星空的每帧下落速度 |
+| `DEFAULT_FPS` | 20 | 默认播放帧率。**只**决定 `frame_ms`，不影响帧数/体积/内存；20fps（50ms/帧）比 40fps 慢一倍、动作更可读 |
+| `BULLET_TRAIL_SEGMENTS` / `BULLET_TRAIL_SPACING` / `BULLET_TRAIL_ALPHA` | 3 / 2.6 / 200 | 子弹拖尾：沿运动反方向补 3 段递减 alpha 的短条 |
 | `DEFAULT_COLORS` | 32 | 默认 GIF 调色板色数 |
 | `TARGET_LOCK_FRAMES` | 25 | RANDOM 策略锁定同一靶子的帧数（防抖动） |
-| `BULLET_PIERCE` | 3 | **单发子弹最大穿透数**（能否清场的关键） |
+| `BULLET_PIERCE` | 7 | **单发子弹最大穿透数**（能否清场的关键） |
+| `FIRE_INTERVAL` | 3 | 每几帧开一炮（`1` = 每帧一发，20fps 下就是每秒 20 发，太密） |
+| `BULLET_SPEED` | 6.0 | 子弹速度 px/帧（射速降下来后靠提速压住总帧数） |
 | `SHIP_TRACK` | 0.18 | 飞船横向追敌插值系数 |
 
 ---
 
-## 2. 数据结构（`cli.py:104-171`）
+## 2. 数据结构（`models.py`）
 
 ### `Target` — 贡献格靶子
 
@@ -69,6 +75,7 @@ class Target:
     size: int               # 像素边长（13..16）
     level: int              # 1..5 贡献等级
     hp: int                 # 剩余 HP（level 5 为 2，其余为 1）
+    max_hp: int = 1         # 初始 HP，供「受伤降一档配色」使用
     alive: bool = True
 ```
 
@@ -120,6 +127,20 @@ class Particle:
 生命周期：每帧 `vy += 0.08`（重力）、`vx *= 0.97`（阻尼）、`life -= 1`；
 渲染时按 `alpha = life / max_life` 线性衰减亮度，实现渐隐。
 
+### `Flash` — 爆炸白闪
+
+```python
+@dataclass
+class Flash:
+    x: float; y: float
+    r: float; max_r: float      # 当前 / 最终半径
+    life: int; max_life: int
+```
+
+`_explode()` 在 `tiny=False` 时生成一发（`max_r = 26` for `big`，否则 `8 + level*3`），
+`_update_flashes()` 每帧 `r += (max_r-2)/max_life`。渲染成「中心白核 +
+16 点扩张点环」—— 打击感主要来自这一下，粒子只是余烬。
+
 ### `Star` — 星空点
 
 ```python
@@ -156,7 +177,7 @@ class Strategy(str, Enum):
 ## 3. 数据获取
 
 ### `fetch_contributions(username, token) -> Optional[Contributions]`
-`cli.py:192-234`
+`data.py`
 
 **行为**
 1. POST `https://api.github.com/graphql`，`User-Agent: gh-pixel-pulverizer/2.0`；
@@ -178,7 +199,7 @@ class Strategy(str, Enum):
 **副作用**：向 stdout 打印警告行。**网络 I/O（唯一网络出口）**。
 
 ### `generate_dummy(username="octocat") -> Contributions`
-`cli.py:237-258`
+`data.py`
 
 用 `random.Random(zlib.crc32(username.encode("utf-8")))` 播种 ——
 **刻意不用内置 `hash()`**：CPython 的 `str.__hash__` 每进程带随机盐（`PYTHONHASHSEED`），
@@ -193,7 +214,7 @@ class Strategy(str, Enum):
 **副作用**：无。**确定性**：同一 username 永远得到同一矩阵（跨进程、跨版本可复现）。
 
 ### `GRAPHQL`（module-level str）
-`cli.py:176-189`
+`models.py`
 
 ```graphql
 query($user: String!) {
@@ -210,13 +231,13 @@ query($user: String!) {
 
 ---
 
-## 4. `Engine`（`cli.py:263-748`）
+## 4. `Engine`（`engine.py`）
 
 ### 4.1 `__init__(contrib, strategy=RANDOM, fps=40, max_frame=0, boss_chance=0.18, seed=None)`
 
 | 属性 | 初始化 |
 |------|--------|
-| `frame_ms` | `max(8, round(1000/fps))` —— 下限 8ms 防御 fps 过大 |
+| `frame_ms` | `max(8, round(1000/fps))` —— 下限 8ms 防御 fps 过大；默认 fps=20 → 50ms/帧 |
 | `rng` | `random.Random(seed)` —— 实例级随机数，不污染全局 |
 | `targets/enemies/bullets/particles/stars` | 空列表，随后填充 |
 | `ship_x` / `ship_target_x` | 初始水平居中 `WIDTH/2 - SHIP_W/2` |
@@ -227,7 +248,7 @@ query($user: String!) {
 **副作用**：调用 `_build_targets()`、`_spawn_stars()`。
 
 ### 4.2 `max_frame` 自动推算：`_auto_max_frame() -> int`
-`cli.py:298-305`
+`engine.py`
 
 ```python
 total_hp = sum(t.hp for t in self.targets)
@@ -238,7 +259,7 @@ return max(240, int(total_hp * 2.4) + 90)         # 实测 ~1.6 帧/HP，留 50%
 > 真清场会提前 `return`，所以这个上限宽松**不影响正常产物体积**，只作为兜底天花板。
 
 ### 4.3 `_build_targets()`
-`cli.py:309-347`
+`engine.py`
 
 - 收集所有 `v > 0` 的值排序 → `counts`，`n = len(counts)`；**`counts` 为空则直接 return**（全空贡献图）；
 - `level_of(count)`：用 `bisect.bisect_left(counts, count) / n` 取「严格小于当前值的占比」；
@@ -251,7 +272,7 @@ return max(240, int(total_hp * 2.4) + 90)         # 实测 ~1.6 帧/HP，留 50%
 > 整图一片深绿且凑不出 BOSS 格。现改为**用户自身分位数**。
 
 ### 4.4 `_spawn_stars()`
-`cli.py:349-358`
+`engine.py`
 
 生成 160 颗星，`z = rng.randint(0,2)`，`speed = STAR_SPEEDS[z]`。速度与亮度都绑定 z → 真三层视差。
 
@@ -295,7 +316,7 @@ return max(240, int(total_hp * 2.4) + 90)         # 实测 ~1.6 帧/HP，留 50%
    命中则 `score = max(0, score - 5)` 并喷 12 个橙色粒子。**飞船不会死**，游戏必然能产出 GIF。
 
 ### 4.6 `_explode(x, y, level=2, tiny=False, big=False)`
-`cli.py:527-559`
+`engine.py`
 
 | 参数组合 | 粒子数 `n` | 速度上限 | 是否加白色火花环 |
 |----------|-----------|----------|------------------|
@@ -308,21 +329,24 @@ return max(240, int(total_hp * 2.4) + 90)         # 实测 ~1.6 帧/HP，留 50%
 
 > **体积敏感区**：`n` 越大，每帧脏矩形越大、GIF 越大。注释指出粒子砍半 ≈ 省 25% 体积。
 
-### 4.7 绘制方法（全部 `_draw_*(d: ImageDraw.ImageDraw)`，无副作用）
+### 4.7 绘制方法（`render.py` 的 `Renderer`，全部 `_draw_*(d)`，无副作用）
 
-| 方法 | 行号 | 要点 |
-|------|------|------|
-| `_draw_stars` | `563-568` | `idx = 3 - s.z` 映射到亮度；偶帧用 `STARS[idx]`，奇帧降一档 → 闪烁感 |
-| `_draw_grid_bg` | `570-581` | 先画底板矩形（外扩 2px），再画 54 条竖线 + 8 条横线，颜色 `(30,35,42)` |
-| `_draw_targets` | `583-595` | `COLORS[min(4, level-1)]`；`level>=5` 在顶边画 2px 高的 `BOSS_HI` **皇冠条**；`hp > 1` 在左上角画 1 个 `BG` 色点表示「未打爆」 |
-| `_draw_bullets` | `597-606` | 己方：3×6 矩形 + 顶端亮点；敌方：3×5 矩形（橙红） |
-| `_draw_enemies` | `608-628` | 红色身体；满血 `(230,60,60)` / 受伤 `(200,40,40)`；四角尖刺；眼睛 `dx` 朝向飞船；`hp < max_hp` 时画 `BOSS_HI` 血条 |
-| `_draw_ship` | `630-662` | `flame_boost = 1.5 - alive_pct`（残余越少越燃）；`flame_h = int(4*boost + sin(frame*0.7)*2 + 2)`；绘制顺序：两翼 → 梯形机身 → 舱（椭圆） → 尾焰外层 → 内层 |
-| `_draw_particles` | `664-671` | `alpha = life/max_life`；`col = v*alpha` 线性调暗（注意 `+ 0*(1-alpha)` 是冗余写法） |
-| `_draw_hud` | `673-692` | `ImageFont.load_default()`（**每帧重新加载**）；左上 `SCORE n` / `BEAT d/total`；右上 `@username`（按 `len(name)*6` 反推宽度做右对齐）+ `F###`；右下 140px 进度条，`pct > 0.3` 用 `GR_L4` 否则橙红 |
+美术方向：**硬核像素风**（自绘点阵字、sprite 飞船、硬边分带背景、无抗锯齿）。
+
+| 方法 | 要点 |
+|------|------|
+| `get_board()` / `_build_board()` | **静态棋盘底，进程内只渲染一次**再逐帧 `copy()`：10 条硬边纵向分带（`BG_TOP`→`BG_BOTTOM`，给平坦底色加纵深）+ 53×7 个 `GRID_BG` 圆角空槽（对齐 GitHub 的 `#161b22`）。空格子本身构成网格，因此**不再画经纬线** |
+| `_draw_stars` | `idx = 3 - s.z` 映射到亮度；偶帧用 `STARS[idx]`，奇帧降一档 → 闪烁感 |
+| `_draw_targets` | **圆角矩形**（`radius=2`）；颜色 = `LEVEL_COLORS[max(0, min(4, level-1-(max_hp-hp)))]` —— **每掉一点血降一档亮度**；`level>=5` 在顶边画 2px `BOSS_HI` **皇冠条** |
+| `_draw_bullets` | 己方：3×6 矩形 + 顶端亮点 + **3 段递减 alpha 拖尾**；敌方：3×5 矩形（橙红）+ 上方拖尾 |
+| `_draw_flashes` | 中心白核（`t>0.6` 时 5×5，随后 3×3 → 1×1，alpha `255*t`）+ **16 点扩张点环**（alpha `230*t²`）。点环比描边圆更有像素味 |
+| `_draw_enemies` | 红色身体；满血 `(230,60,60)` / 受伤 `(200,40,40)`；四角尖刺；眼睛朝飞船；`hp < max_hp` 时画 `BOSS_HI` 血条 |
+| `_draw_ship` | **13×10 像素 sprite 放大 2 倍**：`B` 机身 / `D` 暗部 / `H` 座舱 / `W` 高光；同一行连续同色像素合并成一个 `rectangle`（10 行约 15 次调用）；尾焰是**三节阶梯方块**（半宽 8→5→2，alpha 70/170/255），比三角多边形更像素 |
+| `_draw_particles` | **真·淡出**：`alpha = 255 * (life/max_life)²`；`fade > 0.85` 时画成**白热核心**，冷却后才显本色（火花感） |
+| `_draw_hud` | 用 `font.draw_text()` 画 5×7 点阵字；左上 `SCORE n` / `BEAT d/total`，右上 `@username` 与 `xx%`，右对齐一律用 `text_width()` 精算（**不再** `len(name)*6` 硬猜）；`y=19` 一条 1px 分隔线；底部是 **22 格分段像素进度条** |
 
 ### 4.8 `iter_frames(verbose=True) -> Iterator[Image.Image]`
-`cli.py:711-744`
+`engine.py`
 
 **公开 API，是推荐的主入口。**
 
@@ -336,7 +360,7 @@ return max(240, int(total_hp * 2.4) + 90)         # 实测 ~1.6 帧/HP，留 50%
 > celebration 帧内 `self.frame` **不再递增**（仍在同一次外层循环迭代里），所以 HUD 帧号会停在最后一帧。
 
 ### 4.9 `run(verbose=True) -> List[Image.Image]`
-`cli.py:746-748`
+`engine.py`
 
 ```python
 """兼容旧接口：一次性返回全部帧（内存占用高，建议改用 iter_frames）。"""
@@ -350,10 +374,10 @@ return list(self.iter_frames(verbose))
 ## 5. GIF 编码
 
 ### `_clamp_colors(colors: int) -> int`
-`cli.py:753-754` — `max(2, min(256, colors))`。GIF 调色板最多 256 色，至少 2 色（Pillow 要求 ≥2）。
+`gif.py` — `max(2, min(256, colors))`。GIF 调色板最多 256 色，至少 2 色（Pillow 要求 ≥2）。
 
 ### `build_palette(first: Image.Image, colors=32) -> Image.Image`
-`cli.py:757-765`
+`gif.py`
 
 ```python
 palette = first.quantize(colors=..., dither=Image.Dither.NONE).getpalette()[:256*3]
@@ -364,13 +388,13 @@ pal_img = Image.new("P", first.size); pal_img.putpalette(palette)
 返回一张 **P 模式调色板图**。共享它才能保证全片不闪烁。
 
 ### `quantize_frame(frame, pal_img, colors=32) -> Image.Image`
-`cli.py:768-776`
+`gif.py`
 
 `frame.quantize(palette=pal_img, colors=..., dither=Image.Dither.NONE)`。
 关抖动的理由：像素画是大色块，抖动只会塞高频噪声 → 体积变大、观感几乎不变。
 
 ### `encode_gif(frames: Iterable[Image.Image], path: str, frame_ms: int, colors=32) -> int`
-`cli.py:779-804`
+`gif.py`
 
 - `frames` **可以是生成器**（也必须是，见架构文档的内存模型）；
 - 空序列 → `raise RuntimeError("没有帧")`；
@@ -386,7 +410,7 @@ pal_img = Image.new("P", first.size); pal_img.putpalette(palette)
 ---
 
 ## 6. `main(argv=None)`
-`cli.py:809-864`
+`cli.py`
 
 **参数解析**（argparse）
 
@@ -436,10 +460,11 @@ username=<用户名>
 
 ## 7. 外部可见的「公共 API 清单」
 
-`tests/test_smoke.py` 的 import 列表可作为稳定性的参考契约（`cli.py:20-33`）：
+`tests/test_smoke.py` 的 import 列表可作为稳定性的参考契约 —— 拆分后统一从**包根**导入
+（`cli.py` 仍保留同名 re-export，旧脚本 `from gh_pixel_pulverizer.cli import X` 不破）：
 
 ```python
-from gh_pixel_pulverizer.cli import (
+from gh_pixel_pulverizer import (
     COLS, HEIGHT, ROWS, WIDTH,                # 几何常量
     Contributions, Engine, Strategy,           # 领域模型
     build_palette, encode_gif, quantize_frame, # 编码

@@ -14,7 +14,7 @@
 |------|------|
 | 语言 / 版本 | Python `>=3.9`（CI 验证 3.9 与 3.12） |
 | 运行时依赖 | **仅 1 个**：`pillow>=10.0` |
-| 核心代码 | `gh_pixel_pulverizer/cli.py`（868 行，含全部渲染与游戏逻辑） |
+| 核心代码 | `gh_pixel_pulverizer/` 8 个模块（共 1332 行）：`config` / `font` / `models` / `data` / `engine` / `render` / `gif` / `cli` |
 | 测试 | `tests/test_smoke.py`，18 个用例，**全离线可跑** |
 | 输入 | GitHub GraphQL v4 贡献日历，或缺 token 时的本地伪随机「假数据」 |
 | 输出 | 单张动画 GIF（860×230，共享调色板，帧差分压缩） |
@@ -33,6 +33,7 @@
 | [06-testing-and-ci.md](./06-testing-and-ci.md) | 测试策略、用例清单、CI 流水线、本地复现命令 |
 | [07-design-decisions.md](./07-design-decisions.md) | 设计决策（含踩过的坑）、已知限制与改进建议 |
 | [08-competitive-analysis.md](./08-competitive-analysis.md) | 对标 gh-space-shooter 的差距根因分析与改进路线图 |
+| [09-our-design.md](./09-our-design.md) | 本项目设计思路与实现方案（goto 飞船 + 距离加权随机选列 + 3 处本地化） |
 
 ---
 
@@ -41,9 +42,16 @@
 ```
 gh-pixel-pulverizer/
 ├── gh_pixel_pulverizer/          # 唯一的 Python 包
-│   ├── __init__.py               # 3 行：__version__ = "0.2.0"（版本号唯一来源）
+│   ├── __init__.py               # 44 行：__version__ + 公共 API 统一导出
 │   ├── __main__.py               # 4 行：python -m 入口
-│   └── cli.py                    # 868 行：常量 + 数据结构 + 引擎 + GIF 编码 + CLI
+│   ├── config.py                 # 119 行：常量（调色板 / 几何 / 可调参数）
+│   ├── font.py                   # 123 行：自绘 5×7 点阵字体
+│   ├── models.py                 # 92 行：7 个 dataclass + Strategy
+│   ├── data.py                   # 101 行：GraphQL 抓取 + 假数据
+│   ├── engine.py                 # 391 行：玩法逻辑（不 import PIL）
+│   ├── render.py                 # 280 行：Renderer 绘制层（像素风）
+│   ├── gif.py                    # 69 行：编码（共享调色板 + 量化）
+│   └── cli.py                    # 109 行：argparse + 串流程
 ├── tests/
 │   └── test_smoke.py             # 184 行：18 个离线冒烟用例
 ├── .github/workflows/ci.yml      # 52 行：测试 + 端到端生成 GIF + 上传产物
@@ -63,16 +71,16 @@ gh-pixel-pulverizer/
 
 | 概念 | 含义 | 代码位置 |
 |------|------|----------|
-| **Contributions** | 二维贡献矩阵 `rows[7][53]`，`rows[weekday][week_index]` = 当天提交数 | `cli.py:160-164` |
-| **Target** | 每个非空格子转换成的靶子，含 `level`(1-5)、`hp`、`alive` | `cli.py:106-122` |
-| **level 分档** | 按**用户自身贡献分位数**（而非绝对阈值）划分 5 档 | `cli.py:309-347` |
-| **Engine** | 游戏状态机 + 渲染器，拥有 `targets/enemies/bullets/particles/stars` | `cli.py:263-748` |
-| **frame** | 一帧 = 一次逻辑更新 + 一张 PIL Image；`frame_ms = 1000/fps` | `cli.py:711-744` |
-| **iter_frames()** | 生成器：边产帧边被消费，避免全量驻留内存 | `cli.py:711` |
-| **共享调色板** | 用首帧生成一张 P 模式调色板，所有帧复用 → 不闪烁 | `cli.py:757-765` |
-| **Strategy** | 飞船选靶策略：`column` / `row` / `random` / `chaos` | `cli.py:167-171` |
-| **BOSS（Enemy）** | level ≥ 4 的格子被打爆时有几率生成，俯冲 + 向飞船射击 | `cli.py:125-132` |
-| **celebration** | 全部清场后追加的 15 帧烟花动画 | `cli.py:734-744` |
+| **Contributions** | 二维贡献矩阵 `rows[7][53]`，`rows[weekday][week_index]` = 当天提交数 | `models.py` |
+| **Target** | 每个非空格子转换成的靶子，含 `level`(1-5)、`hp`、`alive` | `config.py` |
+| **level 分档** | 按**用户自身贡献分位数**（而非绝对阈值）划分 5 档 | `engine.py` |
+| **Engine** | 游戏状态机 + 渲染器，拥有 `targets/enemies/bullets/particles/stars` | `engine.py` |
+| **frame** | 一帧 = 一次逻辑更新 + 一张 PIL Image；`frame_ms = 1000/fps` | `engine.py` |
+| **iter_frames()** | 生成器：边产帧边被消费，避免全量驻留内存 | `engine.py` |
+| **共享调色板** | 用首帧生成一张 P 模式调色板，所有帧复用 → 不闪烁 | `gif.py` |
+| **Strategy** | 飞船选靶策略：`column` / `row` / `random` / `chaos` | `models.py` |
+| **BOSS（Enemy）** | level ≥ 4 的格子被打爆时有几率生成，俯冲 + 向飞船射击 | `models.py` |
+| **celebration** | 全部清场后追加的 15 帧烟花动画 | `engine.py` |
 
 ---
 
@@ -112,7 +120,7 @@ GitHub GraphQL ──▶ Contributions ──▶ Target[] ──▶ Engine.iter_
 
 | 提交 | 说明 | 对本文档的意义 |
 |------|------|----------------|
-| `33b9b14` | 初始提交：核心 `cli.py` | 全部基础能力 |
+| `33b9b14` | 初始提交：核心 `cli.py`（当时是单文件，现已拆成 7 个模块） | 全部基础能力 |
 | `0c6a8bd` | 新增 `action.yml` Composite Action | GitHub Actions 集成形态 |
 | `94f4237` | 修正 Action 判反 + 修复脚本注入风险 | 解释 `action.yml` 的 `env:` 写法 |
 | `1318a2c` | 修复 seed 复现、清场可达、渲染健壮性 | 解释 crc32 播种、`_auto_max_frame()`、`_prune()` |
