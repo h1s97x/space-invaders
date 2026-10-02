@@ -1,12 +1,12 @@
-__pycache__/
-*.py[cod]
-*.egg-info/
+node_modules/
 dist/
-build/
-.venv/
-.env
 *.gif
 *.webp
+# 但 README 顶部的预览图要进仓库，否则 README 在 GitHub 上显示不出来
+!demo.gif
+
+.env
 .DS_Store
 .idea/
 .vscode/
+*.log

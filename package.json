@@ -1,0 +1,33 @@
+{
+  "name": "gh-space-invaders",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "把你的 GitHub 贡献图变成一场像素轰炸游戏",
+  "license": "MIT",
+  "author": "h1s97x",
+  "keywords": [
+    "github",
+    "contribution-graph",
+    "gif",
+    "animation",
+    "space-invaders"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "offline": "tsx src/index.ts --offline",
+    "test": "node --import tsx --test \"test/*.test.ts\"",
+    "check": "npm run build && npm test"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.60",
+    "gifenc": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
