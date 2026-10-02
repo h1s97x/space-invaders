@@ -1,248 +1,182 @@
-# gh-space-invaders 💥
+# gh-space-invaders
 
-> **Space Invaders** — 把你的 GitHub 贡献图炸成一场像素射击 GIF。
-> 贡献越多 → 格子越大、越亮、爆炸越绚丽；高产周（level ≥ 4）有几率飞出 **BOSS 外星人** 往下俯冲，还会向你射子弹。默认参数下一局能**真正打完**，收尾还有烟花庆祝。
+把 GitHub 贡献图射成 GIF 的**像素轰炸游戏**。TypeScript 实现 Node 22。
 
-<div align="center">
-  <img src="https://img.shields.io/badge/python-3.9%2B-3776AB?style=flat&logo=python&logoColor=white">
-  <img src="https://img.shields.io/badge/license-MIT-green.svg">
-  <img src="https://img.shields.io/badge/pillow-10%2B-blue">
-  <img src="https://img.shields.io/badge/💥-Space%20Invaders-FF6B6B">
-  <img src="https://img.shields.io/badge/status-renamed%20in%20progress-lightgrey">
-</div>
+![demo](demo.gif)
 
----
-
-## ✨ 它好在哪
-
-| 特色 | 说明 |
-|------|------|
-| 🎯 **真实贡献图** | 通过 GraphQL 拉最近 53 周 × 7 天的提交记录，每个非空格子都是一个靶子 |
-| 💪 **贡献 = 血量** | 按你自己贡献的分位数分档，格子越大、越亮、爆炸越绚丽 |
-| 🐉 **BOSS 机制** | 高贡献格被打爆时，有几率飞出红色 BOSS 往下俯冲 + 射子弹 |
-| 🔫 **穿透弹** | 一发子弹能连穿 3 个格子，所以 200+ 个靶子真的能被打空 |
-| 🔥 **动态飞船** | 剩余敌占比 < 45% 自动开三发散射；尾焰随战况变化 |
-| 🎲 **4 种策略** | `column` / `row` / `random` / `chaos`（先揍最狠的） |
-| 🌌 **3 层视差星空** | 远近决定速度与亮度，像素感拉满 |
-| 🌈 **真 alpha 渲染** | 粒子 / 子弹拖尾 / 尾焰走 RGBA 图层合成，真·淡出而非变黑块 |
-| 📡 **离线兜底** | 没 token 自动生成模拟贡献图（工作日高产、周末摸鱼） |
-| 🧩 **只有一个依赖** | 纯 Python + `pillow`，逻辑按职责拆成 6 个模块（config / models / data / engine / render / gif） |
-| ✅ **自带测试与 CI** | 全离线可跑：`python -m unittest discover -s tests` |
-
-## 🎮 演示
-
-```
-┌─────────────────────────── HUD ──────────────────────────────────────┐
-│ SCORE 440                                 @yourname    F100          │
-├─────────────────────────── 贡献图战场 ────────────────────────────────┤
-│ ██ ██ ██                                                              │
-│ ██ ███████ ██ ██                                                       │
-│ ██ ███████ ████ ██  ← 越亮越强（level 5 是 BOSS 格，带皇冠）          │
-│ ██ ███████ ████ ██████                                                │
-│ ██ ████    ███████ ██                                                  │
-├─────────────────────────── 飞船区 ────────────────────────────────────┤
-│                           ╱ 飞船 ╲                                    │
-│                    ~~~~~~╱  ▲  ╲~~~~~~  ← 尾焰随战况变化              │
-│                     🚀🟨🟧                                            │
-└───────────────────────────────────────────────────────────────────────┘
-```
-
-## 🚀 5 分钟跑起来
+## 快速开始
 
 ```bash
-# 1. 克隆（本仓库真身托管在 CNB；GitHub 侧 gh-pixel-pulverizer 为改名前的旧镜像）
-git clone https://cnb.cool/h1s97x/plugins/gh-space-invaders.git
-cd gh-space-invaders
+npm install
+npm run build                # 编译到 dist/
+npm test                # 32 个单元测试
+npm run check                   # build + test 一起跑
 
-# 2. 装依赖（或 pip install -e .）
-python -m pip install pillow
-
-# 3. 离线试一把（不用 token）
-python -m gh_space_invaders octocat --offline -o demo.gif
-
-# 4. 用真实 GitHub 数据
-export GH_TOKEN=ghp_xxx
-python -m gh_space_invaders your-username -o game.gif
-
-# 5. 试其他策略
-python -m gh_space_invaders linus -s column           # 从右向左清场
-python -m gh_space_invaders torvalds -s chaos --boss-chance 0.35   # 先揍高产周
-
-# 6. 嫌文件大？压一压（体积主要看帧数）
-python -m gh_space_invaders yourname -o small.gif --colors 16 --max-frame 200
+npm run offline                      # 假数据 → game.gif
+npm run offline -- -o out.gif -s column --fps 40
+node dist/index.js --user h1s97x     # 真数据（需 GITHUB_TOKEN）
+npm run dev -- --offline             # tsx 直跑，不编译
 ```
 
-也可以 pip 装完直接：
+| 参数 | 说明 |
+|---|---|
+| `-o, --output` | 输出 GIF（默认 `game.gif`） |
+| `-s, --strategy` | `random`（默认）/ `column` / `row` / `chaos` |
+| `--fps` | 参考项目默认 `40`；帧时长 = `2000/fps` 毫秒 |
+| `--colors` | 调色板颜色数（默认 32） |
+| `--seed` | 固定随机种子 |
+| `--offline` | 用假数据 |
+
+## 架构
+
+| 文件 | 职责 |
+|---|---|
+| `src/config.ts` | 全部常量：调色板 / 几何 / 速度 / 时长 |
+| `src/types.ts` | `Ship` / `Bullet` / `Enemy` / `Explosion` / `Star` / `Action` |
+| `src/engine.ts` | 玩法：策略 + 主循环 + 碰撞 |
+| `src/render.ts` | 绘制（Canvas 2D） |
+| `src/gif.ts` | GIF 编码（gifenc） |
+| `src/data.ts` | GraphQL 抓取 + 离线假数据 |
+| `src/font.ts` | 自绘 5×7 点阵字体 |
+| `src/rng.ts` | mulberry32 可复现随机 |
+| `src/index.ts` | 参数解析 + 串流程 |
+
+## 玩法设计
+
+最初的想法来自一个开源项目：[czl9707/gh-space-shooter](https://github.com/czl9707/gh-space-shooter)——
+它把贡献图做成太空射击小游戏，这个点子很好。本项目在它的启发下**重新设计并实现**了
+完整玩法，加入了自己的工程取舍：
+
+| 本项目 | 灵感来源 |
+|---|---|
+| `Ship` / `Bullet` / `Enemy` / `Explosion` | `game/drawables/*.py` |
+| 星空 | `game/drawables/starfield.py` |
+| `columnStrategy` / `rowStrategy` / `randomStrategy` | `game/strategies/*.py` |
+| `iterFrames()` | `Animator._generate_frames()` |
+| `canTakeAction()` | `GameState.can_take_action()` |
+| `shoot()` / `animate()` | `GameState.shoot()` / `GameState.animate()` |
+
+### 五个决定"手感"的关键点
+
+1. **格坐标，不是像素坐标**。`Enemy.x/y` 与 `Bullet.x` 都是**整数格坐标**，
+   只有 `Bullet.y` 是浮点。所以命中判定就是 `enemy.x === bullet.x && e.y >= b.y`
+   ——子弹**永远不会横向打偏**，"打空"这个概念根本不存在。
+2. **开火时机由「停稳」决定**，不是定时器：`canTakeAction() = 不在移动中 and 冷却好了`。
+   主循环是 `moveTo(action.x)` → `while (!canTakeAction()) { animate; render }` → `shoot()`。
+3. **飞船匀速 12.5 格/秒**，`min()` 夹住绝不越过（`Ship.animate`）。**没有**加速度、
+   过冲、转向停顿。
+4. **默认策略是 `random`**（照抄参考 `cli.py`）。取**最近的 8 个有目标的列**，
+   按 `同列10 / 1~3列100 / 4列以上1` 加权随机挑一个（那个 `1` 就是"意外感"的来源），
+   再打那一列**最下面**的敌人。
+   别改成 `column` —— `ColumnStrategy` 是"从第 0 周扫到第 51 周"，一排一排推过去，
+   那是最机械的观感（实测清场顺序 0,1,2,3,4,5… 单调递增）。
+5. **`delta_time = 3.0 / fps`**（`animator.py:41`）。注意这**不是** `1/fps`，是它的 3 倍，
+   等于给所有速度乘了 1.5 倍系数；帧时长也是 `1000*2 // fps`。
+   这两个都是参考自己的节奏设定，这里**原样照抄**、不"修正"。
+
+### 在此基础上我们做的改进
+
+- **`RowStrategy` 是快照式发弹**（`for _ in range(enemy.health)` 用的是当时的血量快照），
+  子弹串格/打空就会少发 → 有时**剩最后1 个活靶没人打**。所以在 `force_kill` 收尾之后补了
+  一段「压着最低的活靶继续打」，把参考 `while not is_complete()` 的意图补完整。
+- **贡献分档**：参考直接用 GitHub API 返回的 `level`（0~4）当血量；我们 `data.ts` 拿的是
+  原始贡献数（0~40），所以这里补了**按分位数分档**，否则会出现 hp40 这种值。
+
+### 实测（离线假数据 `@octocat`，seed=1，`fps=40` → 50ms/帧）
+
+| 策略 | 帧数 | 时长 | 清场 | 发弹 |
+|---|---|---|---|---|
+| random（默认） | 2661 | 133s | 269/269 | 699 |
+| column | 1983 | 99s | 269/269 | 648 |
+| row | 2184 | 109s | 269/269 | 653 |
+| chaos | 5600 | 280s | 269/269 | 677 |
+
+> `chaos` 是额外的第四种（优先打等级最高的格子），参考只有 column/row/random 三种。
+
+## 技术栈
+
+- **Node 22** + TypeScript（ESM）
+- **@napi-rs/canvas** —— 预编译二进制渲染，**不需要**装 cairo（比 node-canvas 省事）
+- **gifenc** —— 纯 JS GIF 编码
+
+### gifenc 的坑（都已在代码注释里标注）
+
+- gifenc 是 CJS，Node ESM 下 `import { GIFEncoder } from 'gifenc'` 会抛
+  "does not provide an export named"。必须显式引 `gifenc/dist/gifenc.esm.js`。
+- **调色板是 `[r,g,b][]` 子数组数组**，不是扁平字节；`applyPalette` 要求长度 ≤ 256，
+  且要**尾部多留一项**当透明索引。
+- `applyPalette` 内部 `new Uint32Array(rgba.buffer)` **只看整个 ArrayBuffer**、不看
+  byteOffset/byteLength，所以必须传长度精确的 view（`asExactU8`）。
+- 脏矩形差分靠**透明索引**实现：把与上一帧完全相同的像素写成透明索引 + `dispose=0`。
+  **不要指定 `dispose=2`** —— 那会强制每帧全量编码，体积直接翻倍。
+
+## 测试
+
 ```bash
-gh-space-invaders yourname -o game.gif --fps 12
+npm test          # node:test + tsx，零额外依赖，3~5 秒
+npm run check     # 类型检查 + 测试
 ```
 
-跑测试：
-```bash
-python -m unittest discover -s tests
-```
+32 个用例，分 5 组。**重点是回归防护** —— 把开发过程中踩过的每个坑都钉死：
 
-## ⚙️ 命令行
+| 坑 | 锁它的测试 |
+|---|---|
+| `column` 被误设为默认，轨迹变成"从左到右一排一排清" | `random 的清场顺序非单调`、`默认策略是 random` |
+| `RowStrategy` 快照式发弹 → 残留活靶打不完 | `四种策略都能把场清空` |
+| 策略活锁（17435 帧只开 33 枪 / Python 版直接超时） | `不会死循环`、`都会真正开火` |
+| 贡献分档丢失 → 出现 hp40 | `血量只能是 1..4` |
+| 先减血再读血量 → `score` 恒为 0 | `score 与击败数成正比` |
+| gifenc 调色板/透明槽位处理错 | `GIF89a 头 + 尺寸 + 尾块`、`颜色数被夹在 2..255` |
 
-| 参数 | 默认 | 说明 |
-|------|------|------|
-| `username` | 见下 | GitHub 用户名；省略时依次取 `GITHUB_USER` → `GITHUB_REPOSITORY_OWNER` → `octocat` |
-| `-o, --output` | `game.gif` | 输出路径 |
-| `-s, --strategy` | `random` | `column` / `row` / `random` / `chaos` |
-| `--fps` | `20` | 播放帧率（只决定播放快慢，不改变体积；帧数不变） |
-| `--max-frame` | `0`（自动） | 帧数上限；`0` = 按靶子血量自动推算，保证能打到通关动画 |
-| `--colors` | `32` | GIF 调色板色数，越小体积越小 |
-| `--offline` | `false` | 不用 API，跑假数据 |
-| `--seed` | 随机 | 固定随机种子（假数据与整局过程完全可复现） |
-| `--boss-chance` | `0.18` | 高贡献格出 BOSS 的概率 |
-| `--fire-interval` | `2` | 掠过新列时的最小开火间隔（越大射速越慢，也会拉长清场帧数与体积） |
+## CI
 
-## 🔌 接入 GitHub Profile README
+- **GitHub Actions**：`.github/workflows/ci.yml` —— Node 22，装依赖 → 类型检查 → 测试 → 离线冒烟出图
+- **CNB**：`.cnb.yml`
+- **作为 Action 使用**：`action.yml`（`runs.using: node22`，产物为 GIF）
 
-**README.md:**
-```markdown
-<details>
-  <summary>💥 点我启动 Space Invaders</summary>
-  <br>
-  <p align="center">
-    <img src="game.gif" alt="Space Invaders">
-  </p>
-  <p align="center">
-    <sub>你造的贡献，你得自己炸 🐉</sub>
-  </p>
-</details>
-```
+## 仓库文档
 
-**方式 A：直接用 composite Action（推荐）**
+| 文档 | 用途 |
+|---|---|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 开发环境、提交规范、**改动玩法必读** |
+| [SECURITY.md](SECURITY.md) | 安全问题报告渠道与响应承诺 |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | 行为准则 |
+| [CHANGELOG.md](CHANGELOG.md) | 更新日志（含 Python → TypeScript 的破坏性变更） |
+| [NOTICE](NOTICE) | 灵感来源与第三方许可声明 |
+| [LICENSE](LICENSE) | MIT |
 
-**`.github/workflows/space-invaders.yml`:**
-```yaml
-name: Space Invaders
+Issue / PR 模板已配置在 `.github/` 下。
 
-on:
-  schedule:
-    - cron: '0 3 * * *'   # 每天 UTC 3 点
-  workflow_dispatch:
+## 致谢与许可
 
-permissions:
-  contents: write
+本项目采用 **MIT License，Copyright (c) 2026 h1s97x**（见 [LICENSE](LICENSE)）。
 
-jobs:
-  pulverize:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+### 灵感来源与致谢
 
-      - uses: h1s97x/gh-space-invaders@main
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          # username 留空即用仓库 owner
-          fps: '12'
-          colors: '24'
-```
+玩法思路来自 **[czl9707/gh-space-shooter](https://github.com/czl9707/gh-space-shooter)**
+（Copyright (c) 2026 Zane Chen，MIT 许可）—— 感谢 Zane Chen 开源了这个点子。
+按 MIT 许可的要求，原项目的版权声明与许可声明完整保留在 [NOTICE](NOTICE) 中。
 
-Action 复用地址说明：⚠️ **GitHub 侧仓库尚未就绪** —— `h1s97x/gh-space-invaders` 目前不存在（404），
-现有 GitHub 仓库仍是改名前的 `h1s97x/gh-pixel-pulverizer`。因此下面 `uses:` 里的
-`h1s97x/gh-space-invaders@main` 在 GitHub 侧仓库建好前装了会失败；CNB 侧可用
-`https://cnb.cool/h1s97x/plugins/gh-space-invaders` 复用 Action。
+本项目**并非该项目的复制或逐文件对译**，而是在其启发下用 TypeScript 重新设计实现：
 
-Action 会生成 GIF 并顺手帮你提交：默认会 **amend** 上一次自己的 commit（避免每天刷一条记录），
-不想 amend 就设 `no-amend: 'true'`；只想拿到文件、不想提交就设 `no-commit: 'true'`，
-产物路径通过 `steps.<id>.outputs.output` 取。
+| 维度 | 原项目 | 本项目 |
+|---|---|---|
+| 语言 / 架构 | Python + PIL | **TypeScript + `@napi-rs/canvas`** |
+| 坐标系 | 像素 | **格坐标**；子弹 x 量化为整数列 |
+| 渲染 | 每帧全量重绘 | **静态底 + drawImage**，GIF 走**透明索引差分** |
+| 数据 | 直接用 API 的 level 0~4 | **按分位数分档** |
+| 工程 | — | **离线模式、可复现种子、单元测试、CI** |
+| 已知缺陷 | 残留活靶 | **已修**（见上节） |
 
-**方式 B：不用 Action，自己拼脚本**
+### 依赖
 
-```yaml
-      - name: 💥 Generate GIF
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO_OWNER: ${{ github.repository_owner }}
-        run: |
-          python -m pip install --quiet --break-system-packages \
-            "gh-space-invaders @ git+https://cnb.cool/h1s97x/plugins/gh-space-invaders.git"
-          gh-space-invaders "$REPO_OWNER" -o game.gif --fps 12 --colors 24
+| 包 | 许可 |
+|---|---|
+| `@napi-rs/canvas` | MIT |
+| `gifenc` | MIT (c) Matt DesLauriers |
+| `typescript` | Apache-2.0 (c) Microsoft Corp. |
+| `tsx` | MIT (c) Hiroki Osame |
 
-      - name: 📦 Commit if changed
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add game.gif
-          if git diff --cached --quiet; then
-            echo "game.gif 没变化，跳过"
-          else
-            git commit -m "💥 space-invaders: update ${GITHUB_RUN_ID}"
-            git push
-          fi
-```
+## License
 
-> ⚠️ **别把外部输入直接插进 `run:` 里**。`${{ inputs.* }}`、`${{ github.event.* }}` 这类值
-> 一律先经 `env:` 传参再在脚本里引用，否则别人填个 `$(...)` 就能在你的 runner 上执行命令
-> （`action.yml` 就是这么做的）。
-
-## 📏 体积 / 画质怎么权衡
-
-体积 ≈ **帧数 × 每帧字节数**，所以旋钮只有两个方向：
-
-| 想更小 | 做法 | 效果 |
-|--------|------|------|
-| 减帧 | `--max-frame 180` | 最有效，但可能打不完、看不到通关烟花 |
-| 减色 | `--colors 16` | 线性见效，像素画几乎看不出差别 |
-| 减粒子 | 改 `engine.py` 里 `_explode` 的粒子数 | 全屏粒子是每帧差分区域变大的主因 |
-
-已经默认做了的两件事：**关掉调色板抖动**、**不指定 `disposal=2`**（后者会强制每帧全量编码，
-实测体积直接翻倍）。默认参数（`random` 策略）下实测约 700~830 帧（35~42s）、1.8~2.1 MB，
-峰值内存约 230 MB。帧数比旧版（约 480 帧）高，是因为飞船不再是匀速直线扫荡 ——
-随机选目标必然让路径变长，这一段差价买的是「有起伏、不像节拍器」的观感。
-
-## 🏗️ 架构
-
-```
-gh_space_invaders/
-├── __init__.py     # 版本号唯一来源 + 公共 API 统一导出
-├── __main__.py     # python -m 入口
-├── cli.py          # 参数解析 + 串流程（唯一的「胶水」）
-├── config.py       # 常量：调色板 / 几何 / 可调参数
-├── font.py         # 自绘 5×7 点阵字体（硬边，不用 PIL 默认位图字体）
-├── models.py       # 数据结构：Target / Enemy / Bullet / Particle / Flash / Star / Strategy
-├── data.py         # GitHub GraphQL 抓取 + 离线假数据
-├── engine.py       # 玩法：状态机、每帧更新、碰撞、主循环
-├── render.py       # 画面：Renderer，只读消费 Engine 状态
-└── gif.py          # 编码：共享调色板 + 逐帧量化
-tests/
-└── test_smoke.py   # 离线冒烟测试（18 例）
-.github/workflows/
-├── ci.yml          # 跑测试 + 端到端生成 GIF
-```
-
-依赖是单向的，`engine.py` 一行 PIL 都不 import（画什么全交给 `render.py`）：
-```
-cli.py ─┬─▶ data.py   ──▶ models.py ──▶ config.py
-        ├─▶ engine.py ──┬─▶ models.py
-        │               └─▶ render.py ──▶ config.py ──▶ font.py
-        └─▶ gif.py    ──────────────────▶ config.py
-```
-
-数据流：
-```
-GitHub GraphQL ──▶ Target[] ──▶ Engine.iter_frames() ──▶ 逐帧量化 ──▶ GIF
-    or dummy       (贡献格)      (生成器，游戏循环)       (共享调色板)
-```
-
-两个关键设计：
-
-- **`Engine.iter_frames()` 是生成器**：渲染一帧就交给编码器消费掉，RGB 原帧用完即丢，
-  峰值内存只和「量化后的帧」成正比。**别改回 `list()`**，那样 400 帧要多驻留约 230 MB。
-- **每帧末尾 `_prune()`**：回收已死亡的粒子 / 子弹 / 敌人。它们原先只被标记 `alive=False`
-  却永远留在列表里，会被逐帧重复遍历，属于无界增长。
-
-核心类：
-- `Engine` — 游戏循环，管理 target/bullet/enemy/particle
-- `Target` — 贡献格靶子，level 按分位数分档，越高越亮
-- `Enemy` — BOSS 外星人，往下俯冲还会射子弹
-- `Bullet` / `Particle` — 子弹（可穿透）和爆炸粒子
-- `fetch_contributions()` — GraphQL 抓贡献，任何失败都返回 `None`
-- `generate_dummy()` — 离线假数据（用 crc32 做种，同用户永远一致）
-
-## 📄 License
-
-MIT — 随便用随便改，见 [LICENSE](LICENSE)。改出好玩的 fork 告诉我一声就行 ✌️
+MIT，见 [LICENSE](LICENSE)。第三方声明见 [NOTICE](NOTICE)。

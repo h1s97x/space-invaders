@@ -1,0 +1,54 @@
+name: 🐛 Bug 报告
+description: 报告一个可复现的问题
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你花时间反馈！
+
+        **提交前请先跑一遍 `npm run check`**，如果失败，请把报错直接贴进下面，
+        能省掉一轮来回。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么
+      description: 描述你看到的现象
+      placeholder: 例如：`-s column` 时飞船不动，画面只有星星
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      value: |
+        1. npm install
+        2. npm run build
+        3. node dist/index.js ...
+      placeholder: |
+        1. 执行什么命令
+        2. 看到什么输出
+    validations:
+      required: true
+  - type: input
+    id: expected
+    attributes:
+      label: 你期望的结果
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 环境
+      value: |
+        Node 版本：
+        操作系统：
+        参数：
+        --seed（若有）：
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: 补充材料
+      description: 报错信息、截图，或任何你认为有帮助的内容
