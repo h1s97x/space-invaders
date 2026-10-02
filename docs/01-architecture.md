@@ -9,7 +9,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│ 入口层  __main__.py   /   console_script (gh-pixel-pulverizer)        │
+│ 入口层  __main__.py   /   console_script (gh-space-invaders)        │
 │         └─→ cli.py:main(argv)                                        │
 └───────────────────────────┬──────────────────────────────────────────┘
                             │
@@ -56,9 +56,9 @@
 调玩法只碰 `engine.py` + `config.py`，调观感只碰 `render.py` + `config.py`，互不干扰。
 
 > **代价**：原先「`curl` 单个 `cli.py` 下来直接跑」的用法失效了（它依赖零包内导入）。
-> 现已改为 `pip install "gh-pixel-pulverizer @ git+https://github.com/h1s97x/gh-pixel-pulverizer.git"`
-> + 命令行 `gh-pixel-pulverizer <args>`；Action 内部则从
-> `python3 gh_pixel_pulverizer/cli.py` 改为 `python3 -m gh_pixel_pulverizer`。
+> 现已改为 `pip install "gh-space-invaders @ git+https://cnb.cool/h1s97x/plugins/gh-space-invaders.git"`
+> + 命令行 `gh-space-invaders <args>`；Action 内部则从
+> `python3 gh_space_invaders/cli.py` 改为 `python3 -m gh_space_invaders`。
 
 ---
 
@@ -66,7 +66,7 @@
 
 | 层 | 组件 | 职责 | 是否有状态 |
 |----|------|------|-----------|
-| 入口 | `__main__.py`、`pyproject.toml:[project.scripts]` | 暴露 `python -m` 与 `gh-pixel-pulverizer` 两种调用 | 否 |
+| 入口 | `__main__.py`、`pyproject.toml:[project.scripts]` | 暴露 `python -m` 与 `gh-space-invaders` 两种调用 | 否 |
 | CLI | `main(argv)` | 参数解析、token/username 解析、数据源选择、打印进度、写 `$GITHUB_OUTPUT` | 否（只读 env） |
 | 数据获取 | `fetch_contributions()`、`generate_dummy()` | 产出 `Contributions` | 否（纯函数） |
 | 领域模型 | `Target` / `Enemy` / `Bullet` / `Particle` / `Star` / `Contributions` / `Strategy` | 数据容器 + 少量几何属性 | 数据本身 |

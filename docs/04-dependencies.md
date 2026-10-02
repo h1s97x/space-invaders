@@ -5,15 +5,15 @@
 ## 1. 一句话总结
 
 ```
-gh-pixel-pulverizer 的运行时依赖只有一个：pillow。
+gh-space-invaders 的运行时依赖只有一个：pillow。
 其余全部使用 Python 标准库，且刻意避免了 requests / numpy / click 等常见选择。
 ```
 
 这个约束直接服务于项目的两大分发形态：
 
 1. **GitHub Actions 里零成本启动** —— runner 自带 Python，只需补一个 Pillow；
-2. **pip 装完即用** —— `pip install "gh-pixel-pulverizer @ git+https://github.com/h1s97x/gh-pixel-pulverizer.git"`
-   后 `gh-pixel-pulverizer <args>` 直接跑（拆分前是「curl 单个 `cli.py`」，
+2. **pip 装完即用** —— `pip install "gh-space-invaders @ git+https://cnb.cool/h1s97x/plugins/gh-space-invaders.git"`
+   后 `gh-space-invaders <args>` 直接跑（拆分前是「curl 单个 `cli.py`」，
    该用法依赖零包内导入，拆包后已改为 pip 安装）。
 
 ---
@@ -127,7 +127,7 @@ requires-python = ">=3.9"
                              │ 读取 __version__（构建期反射）
                              ▼
      ┌─────────────────────────────────────────────────────┐
-     │                gh_pixel_pulverizer.__init__         │
+     │                gh_space_invaders.__init__         │
      │                     __version__ = "0.2.0"           │
      └─────────────────────────────────────────────────────┘
                              ▲ (import 包即执行)
@@ -136,7 +136,7 @@ requires-python = ">=3.9"
   │ __main__.py  │           │        │  tests/test_smoke.py  │
   │              │           │        │                       │
   │ from .cli import main ───┼───┐    │ sys.path.insert(根)   │
-  └──────────────┘           │   │    │ from gh_pixel_...cli  │
+  └──────────────┘           │   │    │ from gh_space_...cli  │
                              │   │    │   import (12个符号)   │
                              │   ▼    └───────────┬───────────┘
                              │  ┌─────────────────▼─────────────────┐
@@ -166,8 +166,8 @@ requires-python = ">=3.9"
 2. **只有 `render.py` 与 `gif.py` 会 import PIL**；`engine.py` 完全不碰图像库。
 3. `render.py` 只在 `TYPE_CHECKING` 下引用 `Engine`，运行时不 import `engine.py`，
    所以 `engine → render` 这条边不会形成循环。
-4. 拆分后**不再支持** `python gh_pixel_pulverizer/cli.py` 直跑（需要包上下文），
-   统一用 `python -m gh_pixel_pulverizer` 或安装后的 console script。
+4. 拆分后**不再支持** `python gh_space_invaders/cli.py` 直跑（需要包上下文），
+   统一用 `python -m gh_space_invaders` 或安装后的 console script。
 
 ---
 
@@ -177,26 +177,26 @@ requires-python = ">=3.9"
 
 | 字段 | 值 | 说明 |
 |------|-----|------|
-| `name` | `gh-pixel-pulverizer` | PyPI 名 |
-| `dynamic.version` | `attr: gh_pixel_pulverizer.__version__` | **版本单一来源** |
+| `name` | `gh-space-invaders` | PyPI 名 |
+| `dynamic.version` | `attr: gh_space_invaders.__version__` | **版本单一来源** |
 | `license` | `MIT` + `license-files = ["LICENSE"]` | |
 | `requires-python` | `>=3.9` | |
 | `dependencies` | `["pillow>=10.0"]` | 唯一运行时依赖 |
-| `[project.scripts]` | `gh-pixel-pulverizer = "gh_pixel_pulverizer.cli:main"` | 安装后可直接命令行调用 |
-| `[tool.setuptools.packages.find] include` | `["gh_pixel_pulverizer*"]` | 只打包这一个包，`tests` 不进 wheel |
+| `[project.scripts]` | `gh-space-invaders = "gh_space_invaders.cli:main"` | 安装后可直接命令行调用 |
+| `[tool.setuptools.packages.find] include` | `["gh_space_invaders*"]` | 只打包这一个包，`tests` 不进 wheel |
 
 ### 6.2 三种调用形态
 
 ```
-形态 A  源码直跑        python -m gh_pixel_pulverizer <args>
+形态 A  源码直跑        python -m gh_space_invaders <args>
                           └─ __main__.py → cli.main(argv=None)
 
-形态 B  安装为命令      pip install -e .  →  gh-pixel-pulverizer <args>
-                          └─ console_script → gh_pixel_pulverizer.cli:main
+形态 B  安装为命令      pip install -e .  →  gh-space-invaders <args>
+                          └─ console_script → gh_space_invaders.cli:main
 
-形态 C  Actions 复用    uses: h1s97x/gh-pixel-pulverizer@main
+形态 C  Actions 复用    uses: h1s97x/gh-space-invaders@main  （GitHub 侧仓库待建，旧名 gh-pixel-pulverizer）
                           └─ action.yml step ②: cd $GITHUB_ACTION_PATH
-                                                python3 -m gh_pixel_pulverizer <args>
+                                                python3 -m gh_space_invaders <args>
                              （走 __main__.py → cli.main()）
 ```
 

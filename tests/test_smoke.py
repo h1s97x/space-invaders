@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from PIL import Image  # noqa: E402
 
-from gh_pixel_pulverizer import (  # noqa: E402
+from gh_space_invaders import (  # noqa: E402
     COLS,
     HEIGHT,
     ROWS,
@@ -177,7 +177,7 @@ class TestNetworkFailurePaths(unittest.TestCase):
     def test_bad_credentials_return_none(self):
         # 无 token → 401；网络不可达 → URLError。两种都应该返回 None。
         self.assertIsNone(
-            fetch_contributions("gh-pixel-pulverizer-no-such-user", None))
+            fetch_contributions("gh-space-invaders-no-such-user", None))
 
 
 if __name__ == "__main__":

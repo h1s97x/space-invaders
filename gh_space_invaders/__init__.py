@@ -1,4 +1,4 @@
-"""gh-pixel-pulverizer: 把 GitHub 贡献图炸成像素 GIF 💥
+"""gh-space-invaders: 把 GitHub 贡献图炸成像素 GIF 💥
 
 拆分后的模块分工（`cli.py` 只是参数解析 + 串流程）：
 
@@ -10,7 +10,7 @@
     gif.py      编码（共享调色板 + 逐帧量化）
     cli.py      命令行入口
 
-对外 API 全部从包根导出 —— `from gh_pixel_pulverizer import Engine` 即可，
+对外 API 全部从包根导出 —— `from gh_space_invaders import Engine` 即可，
 不必关心内部文件划分。
 """
 

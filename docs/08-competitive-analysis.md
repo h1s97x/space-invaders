@@ -9,7 +9,7 @@
 
 ## 1. 先说结论
 
-| 维度 | 我们（gh-pixel-pulverizer） | 对方（gh-space-shooter） | 判定 |
+| 维度 | 我们（gh-space-invaders） | 对方（gh-space-shooter） | 判定 |
 |------|---------------------------|--------------------------|------|
 | **画面观感** | 纯 RGB 绘制，衰减靠「颜色乘 alpha 变暗」 | **RGBA 图层 + alpha 合成**，真正的半透明淡出 | ❌ 我们输 |
 | **格子质感** | `rectangle` 直角方块 | `rounded_rectangle(radius=2)` 圆角 | ❌ 我们输 |
@@ -169,7 +169,7 @@ frame_list[0].save(buffer, format="gif", save_all=True,
 
 ## 4. 改进清单（按 收益 / 成本 排序）
 
-> 坐标均已对应我方 `gh_pixel_pulverizer/`（几何常量在 `config.py`，绘制在 `render.py`）。
+> 坐标均已对应我方 `gh_space_invaders/`（几何常量在 `config.py`，绘制在 `render.py`）。
 
 ### P0 🔴 RGBA 渲染管线 —— 单点改动，全局观感跃升
 

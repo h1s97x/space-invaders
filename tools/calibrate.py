@@ -23,8 +23,8 @@ import argparse
 import statistics as st
 import sys
 
-import gh_pixel_pulverizer.engine as eng
-from gh_pixel_pulverizer.data import generate_dummy
+import gh_space_invaders.engine as eng
+from gh_space_invaders.data import generate_dummy
 
 USERS = ("octocat", "torvalds")
 SEEDS = (1, 2, 3, 7, 11, 42)

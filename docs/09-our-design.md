@@ -63,7 +63,7 @@
 `_update_ship`（engine.py:159）每帧把 `ship_x` 朝 `ship_target_x` 匀速移动，到达
 `SHIP_ARRIVE_EPS=1px` 容差即停、置 `arrived=True`：
 
-```180:208:gh_pixel_pulverizer/engine.py
+```180:208:gh_space_invaders/engine.py
     def _update_ship(self):
         """goto 目标列 —— 移植自参考项目 `Ship.animate()` 的匀速趋近。
         ...
@@ -100,7 +100,7 @@
 
 ## 4. 核心机制二：目标选择 `_pick_goal`（移植 `RandomStrategy` + 变体）
 
-```208:255:gh_pixel_pulverizer/engine.py
+```208:255:gh_space_invaders/engine.py
     def _pick_goal(self):
         """选下一个主攻列 —— 参考项目 `RandomStrategy` 的移植 + 策略变体。
         ...
@@ -163,7 +163,7 @@ BOSS 只能等自己撞底 —— 那就不是「战斗」了。
 独立射速会与速度打架——飞船慢射速快时会停在空列上空放（实测 60% 子弹打空、
 清场率 238/268 → 84/268）。改成「位移触发」后射速是派生量，二者不可能再冲突。
 
-```296:369:gh_pixel_pulverizer/engine.py
+```296:369:gh_space_invaders/engine.py
     def _fire(self):
         """飞船开火 —— 唯一的规则是：**这一列还没被在飞的子弹覆盖，就开一枪**。
         ...

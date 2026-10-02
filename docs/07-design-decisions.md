@@ -15,9 +15,9 @@
   改「格子圆角」要在 300 行玩法代码之间翻找。拆分后最大模块 368 行，
   且**调玩法与调观感不再互相踩脚**。
 - **代价**：放弃了「curl 单个 `cli.py` 直跑」的用法（它依赖零包内导入）。
-  替代方案：`pip install "gh-pixel-pulverizer @ git+..."` + console script；
-  Action 内部改为 `python3 -m gh_pixel_pulverizer`。
-- **兼容性**：`cli.py` 仍 re-export 旧符号，`from gh_pixel_pulverizer.cli import X` 不破；
+  替代方案：`pip install "gh-space-invaders @ git+..."` + console script；
+  Action 内部改为 `python3 -m gh_space_invaders`。
+- **兼容性**：`cli.py` 仍 re-export 旧符号，`from gh_space_invaders.cli import X` 不破；
   包根 `__init__.py` 统一导出公共 API。
 - **守护**：拆分是纯移动，不改任何行为 —— 验收标准是同一 seed 下 GIF 的
   **md5 与拆分前逐字节一致**。
@@ -122,7 +122,7 @@ def iter_frames(self, verbose=True) -> Iterator[Image.Image]:
 
 - **问题**：每天定时跑一次，若每次新建 commit，用户的贡献历史会被自己的机器人刷屏。
 - **决策**：三重条件下 amend（见 [02](./02-modules.md) §5.5）：
-  ① 未显式关闭 amend；② 暂存区/工作区没有**除 GIF 之外**的改动；③ 上一条 commit message 以 `💥` 开头且含 `pixel-pulverizer`。
+  ① 未显式关闭 amend；② 暂存区/工作区没有**除 GIF 之外**的改动；③ 上一条 commit message 以 `💥` 开头且含 `space-invaders`。
 - **为什么需要 ②③**：确保 amend 绝不会把他人的改动卷进 GIF 的那个 commit，
   也绝不会 amend 掉一条不属于本 Action 的 commit。
 - **退出**：`no-commit: 'true'` 可完全跳过；`no-amend: 'true'` 保留传统的新建 commit 行为。
@@ -133,7 +133,7 @@ def iter_frames(self, verbose=True) -> Iterator[Image.Image]:
 
 - **问题**：版本号同时写在 `pyproject.toml` 与代码里必然漂移。
 - **决策**：`__init__.py:__version__ = "0.2.0"` 为唯一来源，由
-  `[tool.setuptools.dynamic] version = {attr = "gh_pixel_pulverizer.__version__"}` 反射读取。
+  `[tool.setuptools.dynamic] version = {attr = "gh_space_invaders.__version__"}` 反射读取。
 - **发版**：只改 `__init__.py` 一行。
 - **历史**：提交 `7a5cfd4` 「统一版本号来源」。
 
@@ -180,7 +180,7 @@ def iter_frames(self, verbose=True) -> Iterator[Image.Image]:
 2. **加 `--version`** —— 从 `__init__.__version__` 读取，成本极低。
 3. **清理死常量** `GR_L0` / `PADDING`，合并 `WIDTH` 的双步赋值。
 4. **给 `fetch_contributions` 补「成功路径」测试**（本地 stub 或录制回放）。
-5. **CI 增加一步 `pip install .` + `gh-pixel-pulverizer --help`** —— 守护打包元数据与 console script。
+5. **CI 增加一步 `pip install .` + `gh-space-invaders --help`** —— 守护打包元数据与 console script。
 6. **为 `action.yml` 增加自检 workflow**（`uses: ./`）或引入 `act`。
 7. ~~**若做较大重构**：先将 `cli.py` 拆分为多个模块~~ —— **已完成**（见 ADR-1）：
    `config / models / data / engine / render / gif / cli`，验收标准是同 seed 下 GIF 的 md5 与拆分前一致。

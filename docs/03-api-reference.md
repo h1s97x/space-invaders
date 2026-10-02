@@ -2,7 +2,7 @@
 
 > 行号为 0.2.0 版快照；自「RGBA 渲染管线」重构后有约 ±40 行漂移，**以符号名为准**。
 > 各模块中标记 `_`-前缀的函数/方法为内部实现，外部不应依赖。
-> 公开 API 一律从包根导出：`from gh_pixel_pulverizer import Engine, generate_dummy, ...`。
+> 公开 API 一律从包根导出：`from gh_space_invaders import Engine, generate_dummy, ...`。
 
 ---
 
@@ -180,7 +180,7 @@ class Strategy(str, Enum):
 `data.py`
 
 **行为**
-1. POST `https://api.github.com/graphql`，`User-Agent: gh-pixel-pulverizer/2.0`；
+1. POST `https://api.github.com/graphql`，`User-Agent: gh-space-invaders/2.0`；
 2. `token` 非空时加 `Authorization: bearer <token>`（同时也兼容无 token 的公开配额）；
 3. 把 `contributionCalendar.weeks[].contributionDays[]` 铺进 `7×53` 矩阵，
    越界防御：`weeks[:COLS]`、`0 <= weekday < ROWS`；
@@ -461,10 +461,10 @@ username=<用户名>
 ## 7. 外部可见的「公共 API 清单」
 
 `tests/test_smoke.py` 的 import 列表可作为稳定性的参考契约 —— 拆分后统一从**包根**导入
-（`cli.py` 仍保留同名 re-export，旧脚本 `from gh_pixel_pulverizer.cli import X` 不破）：
+（`cli.py` 仍保留同名 re-export，旧脚本 `from gh_space_invaders.cli import X` 不破）：
 
 ```python
-from gh_pixel_pulverizer import (
+from gh_space_invaders import (
     COLS, HEIGHT, ROWS, WIDTH,                # 几何常量
     Contributions, Engine, Strategy,           # 领域模型
     build_palette, encode_gif, quantize_frame, # 编码

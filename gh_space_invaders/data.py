@@ -35,7 +35,7 @@ query($user: String!) {
 def fetch_contributions(username: str, token: Optional[str]) -> Optional[Contributions]:
     url = "https://api.github.com/graphql"
     headers = {"Content-Type": "application/json",
-               "User-Agent": "gh-pixel-pulverizer/2.0"}
+               "User-Agent": "gh-space-invaders/2.0"}
     if token:
         headers["Authorization"] = f"bearer {token}"
     payload = json.dumps({"query": GRAPHQL, "variables": {"user": username}}).encode()

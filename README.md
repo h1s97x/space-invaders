@@ -1,14 +1,14 @@
-# gh-pixel-pulverizer 💥
+# gh-space-invaders 💥
 
-> **Pixel Pulverizer** — 把你的 GitHub 贡献图炸成一场像素射击 GIF。
+> **Space Invaders** — 把你的 GitHub 贡献图炸成一场像素射击 GIF。
 > 贡献越多 → 格子越大、越亮、爆炸越绚丽；高产周（level ≥ 4）有几率飞出 **BOSS 外星人** 往下俯冲，还会向你射子弹。默认参数下一局能**真正打完**，收尾还有烟花庆祝。
 
 <div align="center">
   <img src="https://img.shields.io/badge/python-3.9%2B-3776AB?style=flat&logo=python&logoColor=white">
   <img src="https://img.shields.io/badge/license-MIT-green.svg">
   <img src="https://img.shields.io/badge/pillow-10%2B-blue">
-  <img src="https://img.shields.io/badge/💥-Pixel%20Pulverizer-FF6B6B">
-  <img src="https://github.com/h1s97x/gh-pixel-pulverizer/actions/workflows/ci.yml/badge.svg">
+  <img src="https://img.shields.io/badge/💥-Space%20Invaders-FF6B6B">
+  <img src="https://img.shields.io/badge/status-renamed%20in%20progress-lightgrey">
 </div>
 
 ---
@@ -50,31 +50,31 @@
 ## 🚀 5 分钟跑起来
 
 ```bash
-# 1. 克隆
-git clone https://github.com/h1s97x/gh-pixel-pulverizer.git
-cd gh-pixel-pulverizer
+# 1. 克隆（本仓库真身托管在 CNB；GitHub 侧 gh-pixel-pulverizer 为改名前的旧镜像）
+git clone https://cnb.cool/h1s97x/plugins/gh-space-invaders.git
+cd gh-space-invaders
 
 # 2. 装依赖（或 pip install -e .）
 python -m pip install pillow
 
 # 3. 离线试一把（不用 token）
-python -m gh_pixel_pulverizer octocat --offline -o demo.gif
+python -m gh_space_invaders octocat --offline -o demo.gif
 
 # 4. 用真实 GitHub 数据
 export GH_TOKEN=ghp_xxx
-python -m gh_pixel_pulverizer your-username -o game.gif
+python -m gh_space_invaders your-username -o game.gif
 
 # 5. 试其他策略
-python -m gh_pixel_pulverizer linus -s column           # 从右向左清场
-python -m gh_pixel_pulverizer torvalds -s chaos --boss-chance 0.35   # 先揍高产周
+python -m gh_space_invaders linus -s column           # 从右向左清场
+python -m gh_space_invaders torvalds -s chaos --boss-chance 0.35   # 先揍高产周
 
 # 6. 嫌文件大？压一压（体积主要看帧数）
-python -m gh_pixel_pulverizer yourname -o small.gif --colors 16 --max-frame 200
+python -m gh_space_invaders yourname -o small.gif --colors 16 --max-frame 200
 ```
 
 也可以 pip 装完直接：
 ```bash
-gh-pixel-pulverizer yourname -o game.gif --fps 12
+gh-space-invaders yourname -o game.gif --fps 12
 ```
 
 跑测试：
@@ -102,10 +102,10 @@ python -m unittest discover -s tests
 **README.md:**
 ```markdown
 <details>
-  <summary>💥 点我启动 Pixel Pulverizer</summary>
+  <summary>💥 点我启动 Space Invaders</summary>
   <br>
   <p align="center">
-    <img src="game.gif" alt="Pixel Pulverizer">
+    <img src="game.gif" alt="Space Invaders">
   </p>
   <p align="center">
     <sub>你造的贡献，你得自己炸 🐉</sub>
@@ -115,9 +115,9 @@ python -m unittest discover -s tests
 
 **方式 A：直接用 composite Action（推荐）**
 
-**`.github/workflows/pixel-pulverizer.yml`:**
+**`.github/workflows/space-invaders.yml`:**
 ```yaml
-name: Pixel Pulverizer
+name: Space Invaders
 
 on:
   schedule:
@@ -133,13 +133,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: h1s97x/gh-pixel-pulverizer@main
+      - uses: h1s97x/gh-space-invaders@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # username 留空即用仓库 owner
           fps: '12'
           colors: '24'
 ```
+
+Action 复用地址说明：⚠️ **GitHub 侧仓库尚未就绪** —— `h1s97x/gh-space-invaders` 目前不存在（404），
+现有 GitHub 仓库仍是改名前的 `h1s97x/gh-pixel-pulverizer`。因此下面 `uses:` 里的
+`h1s97x/gh-space-invaders@main` 在 GitHub 侧仓库建好前装了会失败；CNB 侧可用
+`https://cnb.cool/h1s97x/plugins/gh-space-invaders` 复用 Action。
 
 Action 会生成 GIF 并顺手帮你提交：默认会 **amend** 上一次自己的 commit（避免每天刷一条记录），
 不想 amend 就设 `no-amend: 'true'`；只想拿到文件、不想提交就设 `no-commit: 'true'`，
@@ -154,8 +159,8 @@ Action 会生成 GIF 并顺手帮你提交：默认会 **amend** 上一次自己
           REPO_OWNER: ${{ github.repository_owner }}
         run: |
           python -m pip install --quiet --break-system-packages \
-            "gh-pixel-pulverizer @ git+https://github.com/h1s97x/gh-pixel-pulverizer.git"
-          gh-pixel-pulverizer "$REPO_OWNER" -o game.gif --fps 12 --colors 24
+            "gh-space-invaders @ git+https://cnb.cool/h1s97x/plugins/gh-space-invaders.git"
+          gh-space-invaders "$REPO_OWNER" -o game.gif --fps 12 --colors 24
 
       - name: 📦 Commit if changed
         run: |
@@ -165,7 +170,7 @@ Action 会生成 GIF 并顺手帮你提交：默认会 **amend** 上一次自己
           if git diff --cached --quiet; then
             echo "game.gif 没变化，跳过"
           else
-            git commit -m "💥 pixel-pulverizer: update ${GITHUB_RUN_ID}"
+            git commit -m "💥 space-invaders: update ${GITHUB_RUN_ID}"
             git push
           fi
 ```
@@ -192,7 +197,7 @@ Action 会生成 GIF 并顺手帮你提交：默认会 **amend** 上一次自己
 ## 🏗️ 架构
 
 ```
-gh_pixel_pulverizer/
+gh_space_invaders/
 ├── __init__.py     # 版本号唯一来源 + 公共 API 统一导出
 ├── __main__.py     # python -m 入口
 ├── cli.py          # 参数解析 + 串流程（唯一的「胶水」）

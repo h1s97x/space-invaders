@@ -35,7 +35,7 @@ jobs:
 
       - name: 💥 Generate GIF offline (端到端跑一遍)
         run: |
-          python -m gh_pixel_pulverizer octocat --offline \
+          python -m gh_space_invaders octocat --offline \
             -o game.gif --seed 7
           python - <<'PY'
           import os

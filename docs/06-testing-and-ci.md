@@ -107,7 +107,7 @@ flowchart TD
     C --> D[setup-python@v5]
     D --> E[pip install -U pip pillow]
     E --> F[python -m unittest discover -s tests -v]
-    F --> G[python -m gh_pixel_pulverizer octocat --offline -o game.gif --seed 7]
+    F --> G[python -m gh_space_invaders octocat --offline -o game.gif --seed 7]
     G --> H{size > 0 ?}
     H -- yes --> I[upload-artifact@v4 → game-gif-py*]
     H -- no --> J[failure]
@@ -127,7 +127,7 @@ flowchart TD
 | 缺口 | 影响 | 建议 |
 |------|------|------|
 | **联网路径未真实验证** | `fetch_contributions` 的成功分支（`200 + data.user`）从未在 CI 中被执行 | 可用 vcrpy 或本地 HTTP stub 录制一次真实响应做回放测试 |
-| **未安装本项目包** | `pyproject.toml` 的 `[project.scripts]` 与 `dynamic.version` 从未被验证 | 加一步 `pip install .` + `gh-pixel-pulverizer --help` |
+| **未安装本项目包** | `pyproject.toml` 的 `[project.scripts]` 与 `dynamic.version` 从未被验证 | 加一步 `pip install .` + `gh-space-invaders --help` |
 | **`action.yml` 未被测试** | Composite Action 的 inputs/提交逻辑完全靠人工验证 | 可用 `act` 或另建 workflow `uses: ./` 做自测 |
 | **无 lint / 类型检查** | 无 ruff/flake8/mypy 关卡 | 可选；仓库内有 `# noqa: E402` 注释，说明历史上用过 flake8 |
 
@@ -138,7 +138,7 @@ flowchart TD
 ```bash
 python -m pip install pillow
 python -m unittest discover -s tests -v
-python -m gh_pixel_pulverizer octocat --offline -o game.gif --seed 7
+python -m gh_space_invaders octocat --offline -o game.gif --seed 7
 python -c "import os; assert os.path.getsize('game.gif') > 0; print('OK')"
 ```
 

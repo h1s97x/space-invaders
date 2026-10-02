@@ -28,15 +28,15 @@ python -m pip install pillow
 ### 2.2 可编辑安装（推荐用于开发）
 
 ```bash
-git clone https://github.com/h1s97x/gh-pixel-pulverizer.git
-cd gh-pixel-pulverizer
+git clone https://cnb.cool/h1s97x/plugins/gh-space-invaders.git
+cd gh-space-invaders
 python -m pip install -e .
 ```
 
 安装后获得 console script：
 
 ```bash
-gh-pixel-pulverizer yourname -o game.gif --fps 12
+gh-space-invaders yourname -o game.gif --fps 12
 ```
 
 ### 2.3 隔离环境
@@ -54,8 +54,8 @@ python -m pip install -e .
 
 ```bash
 python -m pip install --break-system-packages \
-  "gh-pixel-pulverizer @ git+https://github.com/h1s97x/gh-pixel-pulverizer.git"
-gh-pixel-pulverizer "$USERNAME" -o game.gif --fps 12 --colors 24
+  "gh-space-invaders @ git+https://cnb.cool/h1s97x/plugins/gh-space-invaders.git"
+gh-space-invaders "$USERNAME" -o game.gif --fps 12 --colors 24
 ```
 
 > 依赖仍然只有 pillow，会自动一起装上。
@@ -67,12 +67,12 @@ gh-pixel-pulverizer "$USERNAME" -o game.gif --fps 12 --colors 24
 ### 3.1 三种入口等价
 
 ```bash
-python -m gh_pixel_pulverizer <args>          # 源码目录内
-gh-pixel-pulverizer <args>                    # pip install -e . 之后
-python -m gh_pixel_pulverizer <args>          # Action 用的就是这种
+python -m gh_space_invaders <args>          # 源码目录内
+gh-space-invaders <args>                    # pip install -e . 之后
+python -m gh_space_invaders <args>          # Action 用的就是这种
 ```
 
-> 注：`python gh_pixel_pulverizer/cli.py` 直跑在拆分后已不可用（需要包上下文解析相对导入）。
+> 注：`python gh_space_invaders/cli.py` 直跑在拆分后已不可用（需要包上下文解析相对导入）。
 
 ### 3.2 参数完整表
 
@@ -121,22 +121,22 @@ python -m gh_pixel_pulverizer <args>          # Action 用的就是这种
 
 ```bash
 # ✅ 离线试跑（不需要任何凭据，最安全的第一步）
-python -m gh_pixel_pulverizer octocat --offline -o demo.gif
+python -m gh_space_invaders octocat --offline -o demo.gif
 
 # 🌐 真实数据
 export GH_TOKEN=ghp_xxx
-python -m gh_pixel_pulverizer your-username -o game.gif
+python -m gh_space_invaders your-username -o game.gif
 
 # 🎲 换策略
-python -m gh_pixel_pulverizer linus  -s column                     # 从右往左清场
-python -m gh_pixel_pulverizer torvalds -s chaos --boss-chance 0.35 # 先揍高产周，BOSS 变多
-python -m gh_pixel_pulverizer you -s row                           # 自上而下逐行清
+python -m gh_space_invaders linus  -s column                     # 从右往左清场
+python -m gh_space_invaders torvalds -s chaos --boss-chance 0.35 # 先揍高产周，BOSS 变多
+python -m gh_space_invaders you -s row                           # 自上而下逐行清
 
 # 📦 压体积
-python -m gh_pixel_pulverizer yourname -o small.gif --colors 16 --max-frame 200
+python -m gh_space_invaders yourname -o small.gif --colors 16 --max-frame 200
 
 # 🔁 完全可复现（CI / 回归测试）
-python -m gh_pixel_pulverizer octocat --offline --seed 7 -o fixed.gif
+python -m gh_space_invaders octocat --offline --seed 7 -o fixed.gif
 ```
 
 ---
@@ -177,10 +177,10 @@ python -m gh_pixel_pulverizer octocat --offline --seed 7 -o fixed.gif
 
 ### 6.1 方式 A：Composite Action（推荐）
 
-`.github/workflows/pixel-pulverizer.yml`：
+`.github/workflows/space-invaders.yml`：
 
 ```yaml
-name: Pixel Pulverizer
+name: Space Invaders
 
 on:
   schedule:
@@ -196,15 +196,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: h1s97x/gh-pixel-pulverizer@main
-        id: pulverizer
+      - uses: h1s97x/gh-space-invaders@main
+        id: space-invaders
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # username 留空 → 使用仓库 owner
           fps: '12'
           colors: '24'
 
-      - run: echo "生成于 ${{ steps.pulverizer.outputs.output }}，共 ${{ steps.pulverizer.outputs.frames }} 帧，得分 ${{ steps.pulverizer.outputs.score }}"
+      - run: echo "生成于 ${{ steps.space-invaders.outputs.output }}，共 ${{ steps.space-invaders.outputs.frames }} 帧，得分 ${{ steps.space-invaders.outputs.score }}"
 ```
 
 **inputs 默认值速查**
@@ -242,15 +242,15 @@ jobs:
           REPO_OWNER: ${{ github.repository_owner }}
         run: |
           python -m pip install --quiet --break-system-packages \
-            "gh-pixel-pulverizer @ git+https://github.com/h1s97x/gh-pixel-pulverizer.git"
-          gh-pixel-pulverizer "$REPO_OWNER" -o game.gif --fps 12 --colors 24
+            "gh-space-invaders @ git+https://cnb.cool/h1s97x/plugins/gh-space-invaders.git"
+          gh-space-invaders "$REPO_OWNER" -o game.gif --fps 12 --colors 24
 
       - name: 📦 Commit if changed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add game.gif
-          git diff --cached --quiet || git commit -m "💥 pixel-pulverizer: update ${GITHUB_RUN_ID}"
+          git diff --cached --quiet || git commit -m "💥 space-invaders: update ${GITHUB_RUN_ID}"
           git push
 ```
 
@@ -264,10 +264,10 @@ jobs:
 
 ```markdown
 <details>
-  <summary>💥 点我启动 Pixel Pulverizer</summary>
+  <summary>💥 点我启动 Space Invaders</summary>
   <br>
   <p align="center">
-    <img src="game.gif" alt="Pixel Pulverizer">
+    <img src="game.gif" alt="Space Invaders">
   </p>
   <p align="center">
     <sub>你造的贡献，你得自己炸 🐉</sub>
@@ -303,8 +303,8 @@ jobs:
 ### 7.3 目标：可复现 / 做回归基准
 
 ```bash
-python -m gh_pixel_pulverizer someone --offline --seed 7 -o a.gif
-python -m gh_pixel_pulverizer someone --offline --seed 7 -o b.gif
+python -m gh_space_invaders someone --offline --seed 7 -o a.gif
+python -m gh_space_invaders someone --offline --seed 7 -o b.gif
 # a.gif 与 b.gif 逐字节一致
 ```
 
@@ -331,7 +331,7 @@ README 实测（默认参数、3 个不同用户）：
 python -m unittest discover -s tests
 
 # 2. 端到端生成（产出非空 GIF）
-python -m gh_pixel_pulverizer octocat --offline --seed 7 -o /tmp/game.gif
+python -m gh_space_invaders octocat --offline --seed 7 -o /tmp/game.gif
 
 # 3. 检查尺寸与帧数
 python - <<'PY'
@@ -342,7 +342,7 @@ PY
 
 # 4. 四种策略都跑一遍（各 30 帧，快速）
 for s in column row random chaos; do
-  python -m gh_pixel_pulverizer octocat --offline -s $s --max-frame 30 -o /tmp/$s.gif
+  python -m gh_space_invaders octocat --offline -s $s --max-frame 30 -o /tmp/$s.gif
 done
 ```
 

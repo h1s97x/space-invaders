@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gh-pixel-pulverizer — 把你的 GitHub 贡献图变成一场像素粉碎游戏！
+gh-space-invaders — 把你的 GitHub 贡献图变成一场像素粉碎游戏！
 
 我们自己实现了一遍，还加了几个巧思：
   🌟 贡献越多 → 格子越大、血越厚、被打掉时爆炸越绚丽
@@ -10,9 +10,9 @@ gh-pixel-pulverizer — 把你的 GitHub 贡献图变成一场像素粉碎游戏
   🌟 没有 token 时自动用假数据兜底
 
 用法:
-    python -m gh_pixel_pulverizer h1s97x                   # 真数据
-    python -m gh_pixel_pulverizer --offline                # 假数据
-    python -m gh_pixel_pulverizer -o game.gif -s random --fps 40
+    python -m gh_space_invaders h1s97x                   # 真数据
+    python -m gh_space_invaders --offline                # 假数据
+    python -m gh_space_invaders -o game.gif -s random --fps 40
 
 这里只放「参数解析 + 串流程」。抓数据在 `data.py`、玩法在 `engine.py`、
 画面在 `render.py`、编码在 `gif.py`。
@@ -31,7 +31,7 @@ from .gif import encode_gif
 from .models import Strategy
 
 # 兼容旧导入路径：以下名字历史上都挂在 cli 上，拆分后继续暴露，
-# 外部脚本 `from gh_pixel_pulverizer.cli import X` 不受影响。
+# 外部脚本 `from gh_space_invaders.cli import X` 不受影响。
 from .config import COLS, ROWS  # noqa: F401
 from .gif import build_palette, quantize_frame  # noqa: F401
 from .models import Contributions  # noqa: F401
@@ -41,7 +41,7 @@ __all__ = ["main", "build_parser"]
 
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
-        description="gh-pixel-pulverizer — 把 GitHub 贡献图射成 GIF")
+        description="gh-space-invaders — 把 GitHub 贡献图射成 GIF")
     ap.add_argument("username", nargs="?", default=None,
                     help="GitHub 用户名（默认取 GITHUB_USER / 仓库 owner / octocat）")
     ap.add_argument("-o", "--output", default="game.gif")
