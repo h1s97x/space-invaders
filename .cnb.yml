@@ -1,0 +1,153 @@
+# CNB 流水线配置
+#
+# 参考 h1s97x/action-gh-social-graph 与 h1s97x/sdutex 的流水线设计：
+#   0. 双向同步总览（重点）：
+#      - CNB → GitHub：本流水线 push 到 main 时自动同步（见第 1 条）
+#      - GitHub → CNB：由 .github/workflows/sync-cnb.yml 兜底反向同步（直接改 GitHub 再回灌 CNB），
+#        与本文件构成双向闭环；两侧都排除 .cnb* / .github/ 路径，避免同步环死循环。
+#   1. Git Sync：每次 push 到 main 后，用官方 tencentcom/git-sync 插件同步到 GitHub
+#      （h1s97x/gh-space-invaders），sync_mode: rebase —— 保留 GitHub 仓库特有的平台文件
+#      （.github/workflows/*.yml），同时避免无条件 force 覆盖远端提交。
+#      敏感信息（GITHUB_USERNAME / GITHUB_TOKEN）存放在密钥仓库 secret-env，通过 imports 引用。
+#   2. 手动触发（Web Trigger）：从 GitHub 拉取最新提交到 CNB（GitHub → CNB），
+#      sync_mode: pull，按钮见 .cnb/web_trigger.yml。
+#   3. 构建门禁：Node 22 → 装依赖 → 类型检查 → 单元测试 → 离线冒烟出图。
+#      PR 门禁放在 GitHub Actions（见 .github/workflows/ci.yml），CNB 侧不重复做。
+#   4. PR 自动分配处理人 / 审查人。
+#   5. Issue 自动分配处理人。
+#   6. Tag 发布：v* tag 触发时生成 GIF 并创建 Release。
+
+main:
+  # ── push 到 main：先跑构建门禁，通过后再同步到 GitHub ──
+  push:
+    - name: build-and-sync
+      imports:
+        - https://cnb.cool/h1s97x/secret-env/-/blob/main/env.yml
+      stages:
+        # ① 构建门禁：测试不过就不该往 GitHub 推
+        - name: build
+          image: docker.io/library/node:22
+          setup:
+            - nodejs
+            - npm
+          script:
+            - name: 安装依赖
+              command: npm ci
+            - name: 类型检查
+              command: npm run build
+            - name: 单元测试
+              command: npm test
+            - name: 冒烟测试（离线出图）
+              command: node dist/index.js --offline --seed 1 --quiet -o dist/smoke.gif
+          # 产物：dist/smoke.gif
+
+        # ② 构建通过 → 同步到 GitHub
+        - name: sync to github
+          image: tencentcom/git-sync
+          settings:
+            target_url: https://github.com/h1s97x/gh-space-invaders.git
+            auth_type: https
+            username: ${GITHUB_USERNAME}
+            password: ${GITHUB_TOKEN}
+            branch: main
+            push_tags: true
+            # Rebase 模式：保留 GitHub 仓库特有的平台文件（.github/workflows/*.yml），
+            # 同时避免无条件 force 覆盖远端新提交。
+            sync_mode: rebase
+            git_user: h1s97x
+            git_email: 1297656998@outlook.com
+
+  # ── PR 创建后自动分配处理人和审查人 ──
+  # 用 pull_request 事件：checkout 的是预合并后的代码（含 PR 分支修改），
+  # 而不是 pull_request.target（只checkout 目标分支 main 的代码）。
+  pull_request:
+    - name: auto-assign-pr-owner
+      env:
+        PR_ASSIGNEE: h1s97x
+        PR_REVIEWER: h1s97x
+      stages:
+        - name: assign pr to owner
+          type: git:reviewer
+          options:
+            type: add-assignee
+            reviewers: ${PR_ASSIGNEE}
+        - name: add pr reviewer
+          type: git:reviewer
+          options:
+            type: add-reviewer-from-repo-members
+
+# 兜底分支：web_trigger / issue.* / tag_push 等事件
+$:
+  # 手动触发构建（等价于本地 npm run check + 出一份 GIF）
+  api_trigger:
+    - name: verify
+      docker:
+        image: docker.io/library/node:22
+      setup:
+        - nodejs
+        - npm
+      stages:
+        - name: check
+          script: |
+            set -e
+            npm ci
+            npm run build
+            npm test
+            node dist/index.js --offline --seed 1 --quiet -o dist/smoke.gif
+            ls -la dist/smoke.gif
+
+  # 手动触发：从 GitHub 拉取（GitHub → CNB），按钮见 .cnb/web_trigger.yml
+  web_trigger_pull_from_github:
+    - name: web-trigger-pull-from-github
+      imports:
+        - https://cnb.cool/h1s97x/secret-env/-/blob/main/env.yml
+      stages:
+        - name: pull from github
+          image: tencentcom/git-sync
+          settings:
+            target_url: https://github.com/h1s97x/gh-space-invaders.git
+            auth_type: https
+            username: ${GITHUB_USERNAME}
+            password: ${GITHUB_TOKEN}
+            sync_mode: pull
+
+  # Issue 创建后自动分配处理人
+  issue.open:
+    - name: auto-assign-issue-owner
+      env:
+        ISSUE_ASSIGNEE: h1s97x
+      stages:
+        - name: assign issue to owner
+          image: cnbcool/cnb-cli
+          script: |
+            set -e
+            cnb issues add-assignees --assignees $ISSUE_ASSIGNEE
+
+  # Tag 发布：生成 GIF + 创建 Release（v* tag 触发）
+  tag_push:
+    - name: release
+      docker:
+        image: docker.io/library/node:22
+      setup:
+        - nodejs
+        - npm
+      stages:
+        - name: build release asset
+          script: |
+            set -e
+            npm ci
+            npm run build
+            npm test
+            node dist/index.js --offline --seed 1 --quiet -o dist/demo.gif
+        - name: create release
+          type: git:release
+          options:
+            descriptionFromFile: CHANGELOG.md
+        - name: upload release assets
+          image: cnbcool/attachments:latest
+          settings:
+            attachments:
+              - "./dist/demo.gif"
+              - "./LICENSE"
+              - "./NOTICE"
+              - "./README.md"

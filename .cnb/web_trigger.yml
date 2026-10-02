@@ -1,0 +1,12 @@
+# CNB Web Trigger 按钮配置
+#
+# 在仓库页面的「流水线」标签页会渲染成一个按钮，点击即触发对应事件。
+# 对应 .cnb.yml 里`$: web_trigger_pull_from_github:` 那条流水线。
+web_trigger:
+  - name: 从 GitHub 拉取最新提交
+    description: >
+      手动触发 GitHub → CNB 的反向同步。
+      如果你在 GitHub 上直接改了东西，用这个按钮把改动回灌到 CNB。
+      存在双向闭环里，所以 GitHub 侧改动后建议点一下，避免两边分叉。
+    stages:
+      - name: web-trigger-pull-from-github

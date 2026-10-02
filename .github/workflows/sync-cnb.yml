@@ -1,0 +1,47 @@
+# GitHub → CNB 反向同步（兜底）
+#
+# 与 .cnb.yml 的「sync to github」构成双向闭环：
+#   CNB --push--> GitHub --push--> CNB
+#
+# 为什么要排除 .cnb* / .github/：
+#   同步配置本身就住在这两个目录里。如果把它们也纳入同步，
+#   CNB 推 .cnb.yml → GitHub 触发本工作流 → 回灌 CNB → CNB 又推 .cnb.yml…
+#   就成了一个永远停不下来的同步环。
+#
+# 所需凭据（在 GitHub 仓库 Settings → Secrets 里配）：
+#   CNB_USERNAME —— CNB 用户名
+#   CNB_TOKEN    —— CNB 访问令牌，需要目标仓库的写权限
+
+name: Sync to CNB
+
+on:
+  push:
+    branches: [main]
+    # 排除同步配置自身，避免同步环
+    paths-ignore:
+      - '.cnb*'
+      - '.github/**'
+  workflow_dispatch: # 也支持手动触发
+
+concurrency:
+  group: sync-cnb
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      # 必须拉全量历史，否则 rebase / 同步会丢提交
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync to CNB Repository
+        uses: docker://tencentcom/git-sync
+        env:
+          PLUGIN_TARGET_URL: "https://cnb.cool/h1s97x/plugins/gh-space-invaders.git"
+          PLUGIN_AUTH_TYPE: "https"
+          PLUGIN_USERNAME: ${{ secrets.CNB_USERNAME }}
+          PLUGIN_PASSWORD: ${{ secrets.CNB_TOKEN }}
+          PLUGIN_SYNC_MODE: "push"
+          PLUGIN_FORCE: "true"

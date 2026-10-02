@@ -1,152 +1,84 @@
-name: "gh-space-invaders"
-description: "💥 把 GitHub 贡献图炸成像素 GIF — 贡献越多敌人越狠"
-author: "h1s97x"
-
+name: 'GitHub Contribution Space Invaders'
+description: '把 GitHub 贡献图渲染成一场像素轰炸游戏的 GIF'
+author: 'h1s97x'
 branding:
-  icon: "zap"
-  color: "red"
+  icon: 'play-circle'
+  color: 'green'
 
 inputs:
-  github-token:
-    description: "GitHub token，用于拉取贡献图"
-    required: true
   username:
-    description: "为谁生成 GIF（留空 = 仓库 owner）"
+    description: 'GitHub 用户名（留空则用仓库 owner）'
     required: false
-    default: ""
-  output-path:
-    description: "GIF 输出路径"
-    required: false
-    default: "game.gif"
+    default: ''
   strategy:
-    description: "攻击策略: column / row / random / chaos"
+    description: '清除策略：random（默认）| column | row | chaos'
     required: false
-    default: "random"
+    default: 'random'
   fps:
-    description: "播放帧率（20 = 50ms/帧，12 = 83ms/帧；只影响播放快慢，不影响体积）"
+    description: '播放帧率（参考项目默认 40）'
     required: false
-    default: "20"
-  max-frame:
-    description: "最大帧数，0 = 按靶子数量自动推算（保证能打完）"
-    required: false
-    default: "0"
-  boss-chance:
-    description: "高贡献格出 BOSS 的概率 (0~1)"
-    required: false
-    default: "0.18"
+    default: '40'
   colors:
-    description: "GIF 调色板颜色数，越少体积越小"
+    description: 'GIF 调色板颜色数'
     required: false
-    default: "32"
+    default: '32'
   seed:
-    description: "固定随机种子（留空 = 每次随机）"
+    description: '随机种子（留空则每次结果不同，便于生成多张候选）'
     required: false
-    default: ""
-  no-amend:
-    description: "是否关闭 amend 上一次 commit（默认自动 amend 避免污染历史）"
-    required: false
-    default: "false"
-  no-commit:
-    description: "完全跳过 commit/push，只生成文件留在 workspace"
-    required: false
-    default: "false"
-
-outputs:
+    default: ''
   output:
-    description: "生成的 GIF 路径"
-    value: ${{ steps.generate.outputs.output }}
-  frames:
-    description: "帧数"
-    value: ${{ steps.generate.outputs.frames }}
-  score:
-    description: "最终得分"
-    value: ${{ steps.generate.outputs.score }}
+    description: '输出文件名（相对工作目录）'
+    required: false
+    default: 'space-invaders.gif'
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - name: 🐍 Check Python + Pillow
+    # 依赖与编译都在 action 自己的目录里做，不污染使用方的仓库
+    - name: 安装依赖并编译
       shell: bash
       run: |
-        if ! python3 -c "import PIL" 2>/dev/null; then
-          # Ubuntu 24.04 等 PEP 668 环境需要 --break-system-packages
-          python3 -m pip install --quiet --break-system-packages pillow 2>/dev/null \
-            || python3 -m pip install --quiet pillow 2>/dev/null \
-            || pip install --quiet pillow
-        fi
-
-    - name: 💥 Generate GIF
-      id: generate
-      shell: bash
-      env:
-        # ⚠️ 所有用户可控输入一律走 env 传参，绝不内插进 run: 脚本（防脚本注入）
-        GH_TOKEN: ${{ inputs.github-token }}
-        INPUT_USERNAME: ${{ inputs.username || github.repository_owner }}
-        INPUT_OUTPUT: ${{ inputs.output-path }}
-        INPUT_STRATEGY: ${{ inputs.strategy }}
-        INPUT_FPS: ${{ inputs.fps }}
-        INPUT_MAX_FRAME: ${{ inputs.max-frame }}
-        INPUT_BOSS_CHANCE: ${{ inputs.boss-chance }}
-        INPUT_COLORS: ${{ inputs.colors }}
-        INPUT_SEED: ${{ inputs.seed }}
-      run: |
+        set -euo pipefail
         cd "${{ github.action_path }}"
+        npm ci
+        npm run build
 
-        EXTRA=()
-        if [ -n "${INPUT_SEED}" ]; then
-          EXTRA=(--seed "${INPUT_SEED}")
-        fi
-
-        python3 -m gh_space_invaders \
-          "${INPUT_USERNAME}" \
-          -o "${INPUT_OUTPUT}" \
-          -s "${INPUT_STRATEGY}" \
-          --fps "${INPUT_FPS}" \
-          --max-frame "${INPUT_MAX_FRAME}" \
-          --boss-chance "${INPUT_BOSS_CHANCE}" \
-          --colors "${INPUT_COLORS}" \
-          "${EXTRA[@]}"
-
-    - name: 📦 Commit & Push (skip if disabled)
-      if: ${{ inputs.no-commit != 'true' }}
+    - name: 生成 GIF
       shell: bash
       env:
-        INPUT_OUTPUT: ${{ inputs.output-path }}
-        INPUT_NO_AMEND: ${{ inputs.no-amend }}
+        GH_TOKEN: ${{ inputs.token || github.token }}
+        IN_USERNAME: ${{ inputs.username }}
+        IN_STRATEGY: ${{ inputs.strategy }}
+        IN_FPS: ${{ inputs.fps }}
+        IN_COLORS: ${{ inputs.colors }}
+        IN_SEED: ${{ inputs.seed }}
+        IN_OUTPUT: ${{ inputs.output }}
       run: |
-        cd "${GITHUB_WORKSPACE}"
-        git config user.name  "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
+        set -euo pipefail
+        ARGS=(--strategy "$IN_STRATEGY" --fps "$IN_FPS" --colors "$IN_COLORS" --output "$IN_OUTPUT")
+        if [ -n "$IN_USERNAME" ]; then ARGS+=(--user "$IN_USERNAME"); fi
+        if [ -n "$IN_SEED" ]; then ARGS+=(--seed "$IN_SEED"); fi
+        cd "${{ github.action_path }}"
+        node dist/index.js "${ARGS[@]}"
+        # 产物搬到工作目录，方便后续步骤 upload-artifact
+        cp "$IN_OUTPUT" "$GITHUB_WORKSPACE/$IN_OUTPUT"
+        ls -la "$GITHUB_WORKSPACE/$IN_OUTPUT"
 
-        if [ ! -f "${INPUT_OUTPUT}" ]; then
-          echo "❌ 未找到 ${INPUT_OUTPUT}，跳过 commit"
-          exit 0
-        fi
+    - name: 输出参数
+      shell: bash
+      run: |
+        echo "path=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
+        echo "bytes=$(stat -c%s "${{ inputs.output }}" 2>/dev/null || echo 0)" >> "$GITHUB_OUTPUT"
 
-        git add -- "${INPUT_OUTPUT}"
+  token:
+    description: '可选：用于读取非公开贡献数据的 PAT，默认用 github.token'
+    required: false
+    default: ''
 
-        # 只有 GIF 本身变了才需要提交
-        if git diff --cached --quiet -- "${INPUT_OUTPUT}"; then
-          echo "ℹ️ ${INPUT_OUTPUT} 没变化，跳过 commit"
-          exit 0
-        fi
-
-        LAST_MSG=$(git log -1 --pretty=%B 2>/dev/null || true)
-        OTHER_STAGED=$(git diff --cached --name-only -- . ":(exclude)${INPUT_OUTPUT}")
-        OTHER_UNSTAGED=$(git diff --name-only -- . ":(exclude)${INPUT_OUTPUT}")
-
-        # GIF 变了、且工作区没有别的改动、且上一个 commit 也是我们写的 → amend
-        # 判据只看 💥 前缀：项目改过名（pixel-pulverizer → space-invaders），
-        # 绑项目名会让历史里旧命名的 commit 失配，白白多出一条 commit。
-        if [ "${INPUT_NO_AMEND}" != "true" ] \
-           && [ -z "${OTHER_STAGED}" ] \
-           && [ -z "${OTHER_UNSTAGED}" ] \
-           && [[ "${LAST_MSG}" == 💥* ]]; then
-          echo "🔄 amend 上一次 commit（仅更新 ${INPUT_OUTPUT}）"
-          git commit --amend --no-edit
-          git push --force-with-lease
-        else
-          echo "📝 新建 commit"
-          git commit -m "💥 space-invaders: update ${GITHUB_RUN_ID}"
-          git push
-        fi
+outputs:
+  path:
+    description: '生成的 GIF 相对路径'
+    value: ${{ steps.outputs.path }}
+  bytes:
+    description: 'GIF 字节数'
+    value: ${{ steps.outputs.bytes }}

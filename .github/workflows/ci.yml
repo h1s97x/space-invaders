@@ -2,51 +2,37 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
-  smoke:
-    name: smoke (py${{ matrix.python-version }})
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.9", "3.12"]
-
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          node-version: '22'
 
-      - name: 🐍 Install deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pillow
+      # ci 里不装 Playwright 之类的大依赖，@napi-rs/canvas 是预编译二进制
+      - name: 安装依赖
+        run: npm ci
 
-      - name: ✅ Smoke tests
-        run: python -m unittest discover -s tests -v
+      - name: 类型检查 + 编译
+        run: npm run build
 
-      - name: 💥 Generate GIF offline (端到端跑一遍)
-        run: |
-          python -m gh_space_invaders octocat --offline \
-            -o game.gif --seed 7
-          python - <<'PY'
-          import os
-          size = os.path.getsize("game.gif")
-          assert size > 0, "GIF 没有产出"
-          print(f"game.gif = {size / 1e6:.2f} MB")
-          PY
+      - name: 单元测试
+        run: npm test
 
-      - name: 📦 Upload GIF
+      - name: 冒烟测试（离线生成一份 GIF）
+        run: node dist/index.js --offline --seed 1 --quiet -o /tmp/smoke.gif
+
+      - name: 上传冒烟产物
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: game-gif-py${{ matrix.python-version }}
-          path: game.gif
-          retention-days: 7
+          name: smoke-gif
+          path: /tmp/smoke.gif
+          retention-days: 3
