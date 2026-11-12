@@ -194,12 +194,13 @@ space-invaders/
 - [x] `domain/` 不 import `sources/`；`render/` 不 import 具体玩法（`test/domain.test.ts` 静态拦截）
 - [x] `args.ts` 单点声明 → `docs:check` 通过
 - [x] 黄金帧 + e2e：`mock calendar → 10 帧 GIF`，校验 GIF89a 头、尺寸、帧数、退出码
-- [ ] GitHub Actions 与 CNB 各一次**远端**端到端 —— 本地等价验证已完成（镜像内运行、
-      `PLUGIN_*` 前缀归一、`action.yml` 14 项 `runs.env` 映射、YAML 关键字段），远端待跑
+- [x] GitHub Actions 与 CNB 各一次远端端到端 —— CNB `cnb-0h8-1k778v47n` success（1/1 pipeline）、
+      GitHub Actions `43172256193` success，均为 `e8579c4`；真数据源分别为
+      `source=cnb targets=98` / `source=github targets=221`
 - [x] 玩法规则文件不含上游常量 / 策略名 / 参考节奏
 - [x] `LICENSE` 只有 `h1s97x`；`NOTICE` 只有灵感致谢；`04-rewrite-record.md` 齐备
-- [ ] 两个旧仓 + 空仓归档 —— 公告已贴、`#13` / `#18` 已带结论关闭；归档 API 返回 403
-      （内置 `CNB_TOKEN` 缺 `repo-code:rw,repo-manage:rw`），待具权限令牌或仓库设置页操作
+- [ ] 两个旧仓 + 空仓归档 —— 公告已贴、`#13` / `#18` 已带结论关闭；内置令牌 403、
+      用户提供的 CNB 令牌 401（26 字符、日历接口拒绝，判定无效），待有效令牌或设置页操作
 
 ## 10. 执行计划
 
@@ -335,21 +336,23 @@ space-invaders/
   open issue 数为 0。
 - 归档前置：旧 `:latest` 镜像 manifest 可拉取，已核验。
 
-**阻塞 / 待用户**
+**后续完成（用户提供 GitHub PAT 后）**
 
-- **归档 403**：内置 `CNB_TOKEN` 是流水线临时令牌，缺 `repo-code:rw,repo-manage:rw`。
-  需要具权限的 CNB 访问令牌（个人设置 → 访问令牌），或在仓库设置页手动归档
+- 主仓重写结果提交并推送：`e8579c4`；`sync-github.sh` 单向同步分发端点（`main` / `latest`），
+  CNB 与 GitHub 两侧 HEAD 一致，新 `ci.yml` / `action.yml` 均已到位。
+- GitHub 真数据源 `source=github targets=221`；CNB 侧用内置令牌 `source=cnb targets=98`。
+- 补装 PyYAML，5 份 YAML 全部可解析。
+- 两侧 CI 端到端全绿：CNB `cnb-0h8-1k778v47n`（pipeline 1/1 success）、
+  GitHub Actions `43172256193`（completed / success），均为 `e8579c4`。
+- 原「3 还需要什么」表中的项至此全部解决：GitHub PAT 已提供、分发端点已同步、CI 已跑通、
+  目标用户名 `h1s97x` 已由 `/user` 接口确认为有效账号。
+
+**仍阻塞：归档**
+
+- 内置 `CNB_TOKEN` 缺 scope（403）；用户提供的 CNB 令牌为 26 字符，调用日历接口返回 401
+  `user is not logged in`，判定无效。两个仓库仍 `freeze: false`。
+- 旧 `:latest` 镜像 manifest 已核验可拉取，归档前置条件满足。
+- 需要完整且带 `repo-code:rw,repo-manage:rw` 的 CNB 访问令牌，或在仓库设置页手动归档
   `cnb-space-invaders` 与 `cnb-profile-3d-contrib`。
-- **3 的两端平台 CI 端到端**：见下表。
 
-### 3 还需要什么
-
-| 项 | 状态 |
-|---|---|
-| CNB 真数据源 | 已用内置令牌跑通，不需要额外凭据 |
-| GitHub 真数据源 | 环境缺 `GITHUB_TOKEN`，需要只读公开贡献数据的 GitHub PAT |
-| GitHub 分发端点同步 | HEAD 仍是旧 `8d63e8a`，新 `ci.yml` / `action.yml` 未同步；需 `contents:write` 的 PAT 并运行 `sync-github.sh`（会 force push） |
-| 平台 CI 端到端 | 需授权提交并推送 **CNB 主仓当前工作区改动**以触发 `.cnb.yml`；GitHub 侧需先同步才有新 `ci.yml`；或用户手动触发 |
-| 目标用户名 | 默认 `h1s97x`，需确认 GitHub 侧同名 |
-
-当前状态：**代码与文档已完成；主仓未创建 git commit；远端已执行 4，归档 5 被权限阻塞**。
+当前状态：**代码、文档、两侧 CI 已完成；主仓与分发端点已同步；仅剩两个仓库的归档动作**。

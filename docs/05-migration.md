@@ -13,8 +13,12 @@
 - 迁移公告已贴在 `cnb-space-invaders` 的 README 顶部并推送（commit `c4f2a82`），远端内容已核验。
 - `#13` / `#18` 已带结论评论并关闭，该仓 open issue 数为 0。
 - 归档前置条件已核验：旧 `:latest` 镜像 manifest 可拉取，归档操作后再次确认仍可拉取。
-- **归档被 API 403 阻塞**：环境内置的流水线临时 `CNB_TOKEN` 缺 `repo-code:rw,repo-manage:rw`。
-  需要具权限的 CNB 访问令牌，或在仓库设置页手动归档两个仓库；完成后把上表状态改为「已归档」。
+- **归档仍待执行**：内置 `CNB_TOKEN` 缺 scope（403）；随后提供的 CNB 令牌为 26 字符、
+  调用日历接口返回 401 `user is not logged in`，判定无效。两个仓库仍 `freeze: false`。
+  需要完整且带 `repo-code:rw,repo-manage:rw` 的令牌，或在仓库设置页手动归档；完成后把上表状态改为「已归档」。
+- 旧 `:latest` 镜像 manifest 在归档尝试后复查仍可拉取。
+- 主仓重写结果已提交推送（`e8579c4`），`sync-github.sh` 已同步分发端点 `main` / `latest`；
+  两侧 CI（CNB `cnb-0h8-1k778v47n`、GitHub Actions `43172256193`）均 success。
 
 ## 参数映射
 
