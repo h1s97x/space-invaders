@@ -199,8 +199,9 @@ space-invaders/
       `source=cnb targets=98` / `source=github targets=221`
 - [x] 玩法规则文件不含上游常量 / 策略名 / 参考节奏
 - [x] `LICENSE` 只有 `h1s97x`；`NOTICE` 只有灵感致谢；`04-rewrite-record.md` 齐备
-- [ ] 两个旧仓 + 空仓归档 —— 公告已贴、`#13` / `#18` 已带结论关闭；内置令牌 403、
-      用户提供的 CNB 令牌 401（26 字符、日历接口拒绝，判定无效），待有效令牌或设置页操作
+- [x] 两个旧仓 + 空仓归档 —— 用带 `repo-code:rw,repo-manage:rw` 的访问令牌执行 `archive-repo`，
+      两仓 `status: 1`（`--status archived` 筛出 2 项）；旧 `:latest` 仍可拉取。
+      注意归档标志是 `status`，不是 `freeze`
 
 ## 10. 执行计划
 
@@ -347,12 +348,17 @@ space-invaders/
 - 原「3 还需要什么」表中的项至此全部解决：GitHub PAT 已提供、分发端点已同步、CI 已跑通、
   目标用户名 `h1s97x` 已由 `/user` 接口确认为有效账号。
 
-**仍阻塞：归档**
+**归档完成（用户重发有效令牌后）**
 
-- 内置 `CNB_TOKEN` 缺 scope（403）；用户提供的 CNB 令牌为 26 字符，调用日历接口返回 401
-  `user is not logged in`，判定无效。两个仓库仍 `freeze: false`。
-- 旧 `:latest` 镜像 manifest 已核验可拉取，归档前置条件满足。
-- 需要完整且带 `repo-code:rw,repo-manage:rw` 的 CNB 访问令牌，或在仓库设置页手动归档
-  `cnb-space-invaders` 与 `cnb-profile-3d-contrib`。
+- 新令牌 27 字符，日历接口返回 403（身份有效、仅缺日历 scope）；`archive-repo` 对两个仓库均返回 200。
+- 归档标志是 `status: 1`，`freeze` 字段不表示归档 —— 此前据此判断「未归档」是误读，已更正。
+  `--status archived` 筛选返回 `cnb-space-invaders` 与 `cnb-profile-3d-contrib` 两项。
+- 归档后旧 `:latest` 镜像 manifest 复查仍可拉取，迁移窗口成立。
 
-当前状态：**代码、文档、两侧 CI 已完成；主仓与分发端点已同步；仅剩两个仓库的归档动作**。
+**遗留：GitHub 分发端点的一次文档同步**
+
+- 第 3 批状态文档只推送到 CNB 主仓：环境已无 `GITHUB_TOKEN` / `GH_TOKEN`，`gh` CLI 未安装，
+  `sync-github.sh` 无法运行。分发端点仍停在 `f240167`（仅落后状态文档，代码与契约一致）。
+- 需要具 `contents:write` 的 GitHub PAT 后运行 `./sync-github.sh`，或由维护者手动同步。
+
+当前状态：**第 9 节 10 条验收全部打勾；代码、文档、两侧 CI、归档均完成；仅分发端点一次文档同步待凭据**。

@@ -1,22 +1,23 @@
 # 05 · 迁移与归档
 
-两个旧仓库即将归档。本文档是用户迁移的唯一依据，也是归档前的检查表。
+两个旧仓库已归档。本文档是用户迁移的唯一依据，也是本次收尾的检查表。
 
 | 旧仓 | 状态 | 去向 |
 |---|---|---|
-| `h1s97x/plugins/cnb-space-invaders` | 公告已发布、issue 已关闭；归档待权限 | 能力并入本仓，插件镜像换坐标 |
+| `h1s97x/plugins/cnb-space-invaders` | 已归档（2026-11-12） | 能力并入本仓，插件镜像换坐标 |
 | `h1s97x/plugins/gh-space-invaders` | 本仓旧实现，已被重写覆盖 | 历史留在 git |
-| `h1s97x/plugins/cnb-profile-3d-contrib` | 空仓，归档待权限 | 上一次收尾的历史欠账 |
+| `h1s97x/plugins/cnb-profile-3d-contrib` | 已归档（2026-11-12） | 上一次收尾的历史欠账 |
 
 ## 执行记录（2026-11-12）
 
 - 迁移公告已贴在 `cnb-space-invaders` 的 README 顶部并推送（commit `c4f2a82`），远端内容已核验。
 - `#13` / `#18` 已带结论评论并关闭，该仓 open issue 数为 0。
 - 归档前置条件已核验：旧 `:latest` 镜像 manifest 可拉取，归档操作后再次确认仍可拉取。
-- **归档仍待执行**：内置 `CNB_TOKEN` 缺 scope（403）；随后提供的 CNB 令牌为 26 字符、
-  调用日历接口返回 401 `user is not logged in`，判定无效。两个仓库仍 `freeze: false`。
-  需要完整且带 `repo-code:rw,repo-manage:rw` 的令牌，或在仓库设置页手动归档；完成后把上表状态改为「已归档」。
-- 旧 `:latest` 镜像 manifest 在归档尝试后复查仍可拉取。
+- **归档已完成**：重发的 CNB 令牌（27 字符，日历接口 403 表示身份有效）勾选了
+  `repo-code:rw` + `repo-manage:rw`，`archive-repo` 对两个仓库均返回 200，两仓 `status: 1`，
+  `--status archived` 筛选确认。归档标志是 `status`，不是 `freeze` —— 此前按 `freeze: false`
+  判断「未归档」是误读，已更正。
+- 旧 `:latest` 镜像 manifest 在归档后复查仍可拉取，迁移窗口成立。
 - 主仓重写结果已提交推送（`e8579c4`），`sync-github.sh` 已同步分发端点 `main` / `latest`；
   两侧 CI（CNB `cnb-0h8-1k778v47n`、GitHub Actions `43172256193`）均 success。
 
