@@ -54,8 +54,8 @@ test('mock calendar → 10 帧 GIF（阶段 1 出口验收）', () => {
 
     const buffer = readFileSync(out);
     assert.equal(buffer.subarray(0, 6).toString('ascii'), 'GIF89a');
-    assert.equal(buffer.readUInt16LE(6), 480, '逻辑屏宽 = width × scale');
-    assert.equal(buffer.readUInt16LE(8), 160, '逻辑屏高 = height × scale');
+    assert.equal(buffer.readUInt16LE(6), 1024, '逻辑屏宽 = width × scale');
+    assert.equal(buffer.readUInt16LE(8), 256, '逻辑屏高 = height × scale');
     assert.equal(countFrames(buffer), 10);
     assert.equal(buffer[buffer.length - 1], 0x3b, 'Trailer');
   } finally {

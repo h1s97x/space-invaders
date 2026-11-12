@@ -19,6 +19,11 @@ export interface GifFrame {
   transparentIndex: number
   /** 毫秒，写入时转为 1/100 秒 */
   delay: number
+  /** 脏矩形：省略则为整屏。未变化的像素写透明索引，靠处置方式 1 保留上一帧 */
+  left?: number
+  top?: number
+  width?: number
+  height?: number
 }
 
 export function encodeGif({
@@ -45,9 +50,14 @@ export function encodeGif({
   let frame = first.value
   while (true) {
     const { indices, palette, transparentIndex } = frame
-    // 图形控制扩展：帧延迟 + 透明色 + 不做处置（每帧都是完整图像）
+    // 图形控制扩展：帧延迟 + 透明色 + 处置方式 1（保留上一帧，脏矩形才成立）
     chunks.push(graphicControl(frame.delay, transparentIndex))
-    chunks.push(imageDescriptor(width, height, 0, 0))
+    chunks.push(imageDescriptor(
+      frame.width ?? width,
+      frame.height ?? height,
+      frame.left ?? 0,
+      frame.top ?? 0,
+    ))
     chunks.push(localColorTable(palette))
     chunks.push(...imageData(indices))
 
@@ -104,8 +114,9 @@ function graphicControl(delayMs: number, transparentIndex: number): Buffer {
   buffer[0] = 0x21
   buffer[1] = 0xf9
   buffer[2] = 0x04
-  // 处置方式 2（恢复背景），并启用透明色
-  buffer[3] = 0x09
+  // 透明色 + 处置方式 1（保留上一帧）。
+  // 脏矩形帧只画变化区域，若沿用 2（恢复背景）画布会被清空，画面只剩碎片。
+  buffer[3] = 0x05
   buffer.writeUInt16LE(Math.max(2, Math.round(delayMs / 10)), 4)
   buffer[6] = transparentIndex
   buffer[7] = 0x00

@@ -28,11 +28,11 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 
 两张都是**完整动画**（不是冒烟用的 10 帧截断版），用真实数据按默认参数生成：
 
-**CNB 活跃日历** — 98 个目标 / 394 帧
+**CNB 活跃日历** — 98 个目标 / 301 帧
 
 ![CNB 效果图](docs/assets/contrib-cnb.gif)
 
-**GitHub 贡献日历** — 222 个目标 / 885 帧
+**GitHub 贡献日历** — 222 个目标 / 668 帧
 
 ![GitHub 效果图](docs/assets/contrib-github.gif)
 
@@ -54,8 +54,8 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 | `CONTRIB_SEED` | number | `1` | 0..2147483647 | 固定随机种子 |
 | `CONTRIB_FPS` | number | `20` | 10..50 | 播放帧率 |
 | `CONTRIB_SCALE` | number | `2` | 1..8 | 整数倍放大 |
-| `CONTRIB_WIDTH` | number | `240` | 32..1024 | 低分辨率画布宽（放大前） |
-| `CONTRIB_HEIGHT` | number | `80` | 16..512 | 低分辨率画布高（放大前） |
+| `CONTRIB_WIDTH` | number | `512` | 32..1024 | 低分辨率画布宽（放大前，需容纳整年 53 列） |
+| `CONTRIB_HEIGHT` | number | `128` | 16..512 | 低分辨率画布高（放大前，含 HUD 与飞船区） |
 | `CONTRIB_MAX_FRAMES` | number | `4800` | 1..20000 | 帧数硬上界 |
 | `CONTRIB_RULE` | string | `waves` | string | 规则注册表 id |
 | `CONTRIB_RENDERER` | string | `invader` | string | 渲染注册表 id |

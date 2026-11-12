@@ -45,13 +45,13 @@ inputs:
     required: false
     default: '2'
   width:
-    description: '低分辨率画布宽'
+    description: '低分辨率画布宽（放大前，需容纳整年 53 列）'
     required: false
-    default: '240'
+    default: '512'
   height:
-    description: '低分辨率画布高'
+    description: '低分辨率画布高（放大前，含 HUD 与飞船区）'
     required: false
-    default: '80'
+    default: '128'
   max_frames:
     description: '帧数硬上界'
     required: false

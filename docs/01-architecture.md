@@ -45,6 +45,9 @@ pack/      Dockerfile · entrypoint.sh · action.yml · plugin-meta.json · 两�
 帧不驻留内存，`CONTRIB_MAX_FRAMES` 是硬上界。调色板全片共用一张，
 索引 0 固定为透明，索引 255 为溢出色兜底（`FALLBACK_INDEX`）。
 
+第二遍同时计算与上一帧的**脏矩形**：未变化像素写透明索引，只把变化区域交给 LZW，
+GIF 处置方式必须是 1（保留上一帧）；用 2（恢复背景）会清掉画布，只剩碎片。
+
 ## 运行层
 
 `Dockerfile` 两阶段：构建层装 devDeps 并 `tsc`，运行层只有

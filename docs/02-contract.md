@@ -18,8 +18,8 @@
 | `CONTRIB_SEED` | number ≥ 0 | `1` | 固定随机种子，保证同一输入得到同一 GIF |
 | `CONTRIB_FPS` | number 10..50 | `20` | 播放帧率 |
 | `CONTRIB_SCALE` | number 1..8 | `2` | 整数倍放大 |
-| `CONTRIB_WIDTH` | number 32..1024 | `240` | 低分辨率画布宽（放大前） |
-| `CONTRIB_HEIGHT` | number 16..512 | `80` | 低分辨率画布高（放大前） |
+| `CONTRIB_WIDTH` | number 32..1024 | `512` | 低分辨率画布宽（放大前，需容纳整年 53 列） |
+| `CONTRIB_HEIGHT` | number 16..512 | `128` | 低分辨率画布高（放大前，含 HUD 与飞船区） |
 | `CONTRIB_MAX_FRAMES` | number 1..20000 | `4800` | 帧数硬上界，保证流水线有界 |
 | `CONTRIB_RULE` | string | `waves` | 规则注册表 id |
 | `CONTRIB_RENDERER` | string | `invader` | 渲染注册表 id |

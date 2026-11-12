@@ -32,14 +32,69 @@ function encodeSequence(
   let frames = 0;
 
   function* gifFrames(): Generator<GifFrame, void, undefined> {
+    let previous: Uint8ClampedArray | null = null;
     for (const frame of makeFrames()) {
       if (frames >= cfg.maxFrames) break;
       const up = upscale(frame.data, frame.width, frame.height, cfg.scale);
+      const indices = toIndices(up.data, palette.map, palette.nearest);
+      const current = new Uint32Array(up.data.buffer, up.data.byteOffset, up.width * up.height);
+      const before = previous
+        ? new Uint32Array(previous.buffer, previous.byteOffset, previous.length / 4)
+        : null;
+
+      let left = 0;
+      let top = 0;
+      let width = up.width;
+      let height = up.height;
+      let region: Uint8Array = indices;
+
+      if (before) {
+        let minX = up.width;
+        let minY = up.height;
+        let maxX = -1;
+        let maxY = -1;
+        for (let y = 0; y < up.height; y += 1) {
+          for (let x = 0; x < up.width; x += 1) {
+            if (current[y * up.width + x] === before[y * up.width + x]) continue;
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+
+        if (maxX < 0) {
+          // 整帧未变：写 1×1 全透明帧，播放器保留上一帧
+          width = 1;
+          height = 1;
+          region = new Uint8Array([0]);
+        } else {
+          left = minX;
+          top = minY;
+          width = maxX - minX + 1;
+          height = maxY - minY + 1;
+          region = new Uint8Array(width * height);
+          for (let y = 0; y < height; y += 1) {
+            for (let x = 0; x < width; x += 1) {
+              const gx = left + x;
+              const gy = top + y;
+              const at = gy * up.width + gx;
+              region[y * width + x] = current[at] === before[at] ? 0 : indices[at]!;
+            }
+          }
+        }
+      }
+
+      previous = Uint8ClampedArray.from(up.data);
       yield {
-        indices: toIndices(up.data, palette.map, palette.nearest),
+        indices: region,
         palette: palette.palette,
         transparentIndex: 0,
         delay: frame.delayMs,
+        left,
+        top,
+        width,
+        height,
       };
       frames += 1;
     }
