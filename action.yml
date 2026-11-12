@@ -1,84 +1,85 @@
-name: 'GitHub Contribution Space Invaders'
-description: '把 GitHub 贡献图渲染成一场像素轰炸游戏的 GIF'
+name: 'Space Invaders Contribution GIF'
+description: '把贡献日历渲染成一张像素动画 GIF（平台无关镜像）'
 author: 'h1s97x'
 branding:
   icon: 'play-circle'
   color: 'green'
 
+# 内核只认 CONTRIB_*：这里把它们从 inputs 映射好，是本文件唯一的职责。
+# 不写 GITHUB_OUTPUT、不提交仓库 —— 产物就是一个文件，交给调用方的工作流处理。
 inputs:
-  username:
-    description: 'GitHub 用户名（留空则用仓库 owner）'
+  source:
+    description: '数据源 id：github | cnb | file | mock'
+    required: false
+    default: 'github'
+  user:
+    description: '目标用户名（留空则用仓库 owner）'
     required: false
     default: ''
-  strategy:
-    description: '清除策略：random（默认）| column | row | chaos'
+  token:
+    description: '访问令牌（留空则用 github.token）'
     required: false
-    default: 'random'
-  fps:
-    description: '播放帧率（参考项目默认 40）'
+    default: ''
+  endpoint:
+    description: '可选 API 基址覆盖'
     required: false
-    default: '40'
-  colors:
-    description: 'GIF 调色板颜色数'
-    required: false
-    default: '32'
-  seed:
-    description: '随机种子（留空则每次结果不同，便于生成多张候选）'
+    default: ''
+  calendar:
+    description: 'file 源读取的归一化日历路径'
     required: false
     default: ''
   output:
-    description: '输出文件名（相对工作目录）'
+    description: '产物文件名'
     required: false
-    default: 'space-invaders.gif'
+    default: 'game.gif'
+  seed:
+    description: '固定随机种子'
+    required: false
+    default: '1'
+  fps:
+    description: '播放帧率 10..50'
+    required: false
+    default: '20'
+  scale:
+    description: '整数倍放大 1..8'
+    required: false
+    default: '2'
+  width:
+    description: '低分辨率画布宽'
+    required: false
+    default: '240'
+  height:
+    description: '低分辨率画布高'
+    required: false
+    default: '80'
+  max_frames:
+    description: '帧数硬上界'
+    required: false
+    default: '4800'
+  rule:
+    description: '规则注册表 id'
+    required: false
+    default: 'waves'
+  renderer:
+    description: '渲染注册表 id'
+    required: false
+    default: 'invader'
 
 runs:
-  using: 'composite'
-  steps:
-    # 依赖与编译都在 action 自己的目录里做，不污染使用方的仓库
-    - name: 安装依赖并编译
-      shell: bash
-      run: |
-        set -euo pipefail
-        cd "${{ github.action_path }}"
-        npm ci
-        npm run build
-
-    - name: 生成 GIF
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.token || github.token }}
-        IN_USERNAME: ${{ inputs.username }}
-        IN_STRATEGY: ${{ inputs.strategy }}
-        IN_FPS: ${{ inputs.fps }}
-        IN_COLORS: ${{ inputs.colors }}
-        IN_SEED: ${{ inputs.seed }}
-        IN_OUTPUT: ${{ inputs.output }}
-      run: |
-        set -euo pipefail
-        ARGS=(--strategy "$IN_STRATEGY" --fps "$IN_FPS" --colors "$IN_COLORS" --output "$IN_OUTPUT")
-        if [ -n "$IN_USERNAME" ]; then ARGS+=(--user "$IN_USERNAME"); fi
-        if [ -n "$IN_SEED" ]; then ARGS+=(--seed "$IN_SEED"); fi
-        cd "${{ github.action_path }}"
-        node dist/index.js "${ARGS[@]}"
-        # 产物搬到工作目录，方便后续步骤 upload-artifact
-        cp "$IN_OUTPUT" "$GITHUB_WORKSPACE/$IN_OUTPUT"
-        ls -la "$GITHUB_WORKSPACE/$IN_OUTPUT"
-
-    - name: 输出参数
-      shell: bash
-      run: |
-        echo "path=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
-        echo "bytes=$(stat -c%s "${{ inputs.output }}" 2>/dev/null || echo 0)" >> "$GITHUB_OUTPUT"
-
-  token:
-    description: '可选：用于读取非公开贡献数据的 PAT，默认用 github.token'
-    required: false
-    default: ''
-
-outputs:
-  path:
-    description: '生成的 GIF 相对路径'
-    value: ${{ steps.outputs.path }}
-  bytes:
-    description: 'GIF 字节数'
-    value: ${{ steps.outputs.bytes }}
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    CONTRIB_SOURCE: ${{ inputs.source }}
+    CONTRIB_USER: ${{ inputs.user || github.repository_owner }}
+    CONTRIB_TOKEN: ${{ inputs.token || github.token }}
+    CONTRIB_ENDPOINT: ${{ inputs.endpoint }}
+    CONTRIB_CALENDAR: ${{ inputs.calendar }}
+    CONTRIB_OUTPUT: ${{ inputs.output }}
+    CONTRIB_SEED: ${{ inputs.seed }}
+    CONTRIB_FPS: ${{ inputs.fps }}
+    CONTRIB_SCALE: ${{ inputs.scale }}
+    CONTRIB_WIDTH: ${{ inputs.width }}
+    CONTRIB_HEIGHT: ${{ inputs.height }}
+    CONTRIB_MAX_FRAMES: ${{ inputs.max_frames }}
+    CONTRIB_RULE: ${{ inputs.rule }}
+    CONTRIB_RENDERER: ${{ inputs.renderer }}

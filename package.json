@@ -1,33 +1,26 @@
 {
-  "name": "gh-space-invaders",
-  "version": "1.0.0",
+  "name": "space-invaders",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "把你的 GitHub 贡献图变成一场像素轰炸游戏",
+  "description": "平台无关的贡献日历像素动画生成器（零运行时依赖）",
   "license": "MIT",
   "author": "h1s97x",
-  "keywords": [
-    "github",
-    "contribution-graph",
-    "gif",
-    "animation",
-    "space-invaders"
-  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
-    "dev": "tsx src/index.ts",
-    "offline": "tsx src/index.ts --offline",
-    "test": "node --import tsx --test \"test/*.test.ts\"",
-    "check": "npm run build && npm test"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test dist/test/*.test.js",
+    "docs": "npm run build && node dist/scripts/docs.js",
+    "docs:check": "node dist/scripts/docs.js --check",
+    "check": "npm run typecheck && npm test && npm run docs:check",
+    "golden": "npm run build && node dist/scripts/golden.js"
   },
-  "dependencies": {
-    "@napi-rs/canvas": "^0.1.60",
-    "gifenc": "^1.0.3"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.9.0",
-    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
 }

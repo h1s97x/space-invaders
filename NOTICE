@@ -1,71 +1,14 @@
-gh-space-invaders
+space-invaders
 Copyright (c) 2026 h1s97x
 
 本软件采用 MIT License，完整条款见 LICENSE 文件。
 
-
-═══════════════════════════════════════════════════════════════════════
 致谢
-═══════════════════════════════════════════════════════════════════════
+────────────────────────────────────────────────────────────
+感谢开源社区里「把贡献日历做成动画」这一创意带来的灵感。
 
-本项目的玩法灵感来自以下开源项目，作者在此致以诚挚谢意：
+本项目的代码、玩法规则、网格几何、配色、光栅化与 GIF 编码器均为本项目
+自行设计与实现，未复制任何第三方源码；运行时依赖为零。
+未继承的外部文件清单与核验方式见 docs/04-rewrite-record.md。
 
-    gh-space-shooter
-    https://github.com/czl9707/gh-space-shooter
-    Copyright (c) 2026 Zane Chen
-    Licensed under the MIT License
-
-感谢 Zane Chen 开源并分享了这个点子。
-
-本项目并非该项目的复制或逐文件对译，而是在其启发下用 TypeScript 重新设计实现。
-主要差异：
-
-  * 语言与架构不同 —— 原项目是 Python + PIL，本项目是 TypeScript +
-    @napi-rs/canvas，GIF 编码用 gifenc；
-  * 坐标系不同 —— 本项目改用「格坐标」，子弹 x 量化为整数列；
-  * 渲染方式不同 —— 本项目预渲染静态底 + drawImage，GIF 用透明索引差分；
-  * 本项目补充了按分位数分档（原项目直接使用 GitHub API 的 level 0~4）；
-  * 本项目补充了离线模式、可复现随机种子、单元测试与 CI；
-  * 本项目修正了原项目 RowStrategy 快照式发弹导致残留活靶的问题。
-
-按 MIT 许可的要求，原项目的版权声明与许可声明全文保留于下方附录，
-同时可见于 https://github.com/czl9707/gh-space-shooter/blob/main/LICENSE
-
-
-═══════════════════════════════════════════════════════════════════════
-依赖
-═══════════════════════════════════════════════════════════════════════
-
-    @napi-rs/canvas   MIT
-    gifenc            MIT   (c) Matt DesLauriers
-    typescript        Apache-2.0  (c) Microsoft Corp.
-    tsx               MIT   (c) Hiroki Osame
-
-各依赖的完整许可文本随其 npm 包分发，位于 node_modules/<包名>/LICENSE。
-
-
-═══════════════════════════════════════════════════════════════════════
-附录：gh-space-shooter 的许可声明原文
-═══════════════════════════════════════════════════════════════════════
-
-The MIT License (MIT)
-
-Copyright (c) 2026 Zane Chen
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+第三方运行时依赖：无。

@@ -8,12 +8,12 @@
     "strict": true,
     "noUnusedLocals": true,
     "noImplicitOverride": true,
+    "rootDir": ".",
     "outDir": "dist",
-    "rootDir": "src",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"]
 }

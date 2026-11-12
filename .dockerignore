@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.github
+.cnb
+.codebuddy
+.tmp-compare
+docs
+examples
+*.gif
+*.md

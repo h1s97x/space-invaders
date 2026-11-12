@@ -1,0 +1,14 @@
+{
+  "name": "space-invaders",
+  "description": "把贡献日历渲染成像素动画 GIF。平台无关内核，零运行时依赖",
+  "images": "https://cnb.cool/h1s97x/plugins/space-invaders/-/packages",
+  "source": "https://cnb.cool/h1s97x/plugins/space-invaders",
+  "bugs": "https://cnb.cool/h1s97x/plugins/space-invaders/-/issues",
+  "tags": ["readme", "gif", "pixel", "contribution", "activity"],
+  "locales": {
+    "en": {
+      "name": "space-invaders",
+      "description": "Render a contribution calendar into a pixel-art animated GIF"
+    }
+  }
+}

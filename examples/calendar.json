@@ -1,0 +1,12 @@
+{
+  "from": "20261101",
+  "to": "20261114",
+  "total": 50,
+  "days": [
+    { "date": "20261102", "metrics": { "commits": 3, "pullRequests": 0, "issues": 0, "reviews": 0, "score": 5 } },
+    { "date": "20261104", "metrics": { "commits": 1, "pullRequests": 1, "issues": 0, "reviews": 0, "score": 3 } },
+    { "date": "20261106", "metrics": { "commits": 0, "pullRequests": 0, "issues": 2, "reviews": 1, "score": 4 } },
+    { "date": "20261109", "metrics": { "commits": 12, "pullRequests": 0, "issues": 0, "reviews": 0, "score": 14 } },
+    { "date": "20261111", "metrics": { "commits": 2, "pullRequests": 0, "issues": 0, "reviews": 0, "score": 2 } }
+  ]
+}

@@ -2,37 +2,43 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
 
-      # ci 里不装 Playwright 之类的大依赖，@napi-rs/canvas 是预编译二进制
-      - name: 安装依赖
-        run: npm ci
+      - name: 校验镜像契约
+        run: |
+          test -s Dockerfile
+          test -s entrypoint.sh
+          sh -n entrypoint.sh
+          grep -q "using: 'docker'" action.yml
+          grep -q "image: 'Dockerfile'" action.yml
 
-      - name: 类型检查 + 编译
-        run: npm run build
+      - name: 离线冒烟
+        env:
+          CONTRIB_SOURCE: mock
+          CONTRIB_MAX_FRAMES: '10'
+          CONTRIB_OUTPUT: smoke.gif
+        run: |
+          node dist/src/cli/index.js
+          test -s smoke.gif
 
-      - name: 单元测试
-        run: npm test
-
-      - name: 冒烟测试（离线生成一份 GIF）
-        run: node dist/index.js --offline --seed 1 --quiet -o /tmp/smoke.gif
-
-      - name: 上传冒烟产物
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-gif
-          path: /tmp/smoke.gif
-          retention-days: 3
+      - name: 容器构建与镜像内运行
+        run: |
+          docker build -t space-invaders:ci .
+          docker run --rm -e CONTRIB_SOURCE=mock -e CONTRIB_MAX_FRAMES=10 -e CONTRIB_OUTPUT=/tmp/out.gif space-invaders:ci

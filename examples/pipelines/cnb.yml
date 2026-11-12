@@ -1,0 +1,18 @@
+main:
+  "crontab: 0 0 * * *":
+    - name: generate contribution gif
+      stages:
+        - name: shooter
+          image: docker.cnb.cool/h1s97x/plugins/space-invaders:latest
+          settings:
+            source: cnb
+            user: h1s97x
+            token: ${CNB_TOKEN}
+            output: game.gif
+        - name: commit and push
+          script: |
+            git config user.name cnb
+            git config user.email cnb@cnb.cool
+            git add game.gif
+            git diff --quiet --cached || git commit -m "chore: update contribution gif"
+            git push

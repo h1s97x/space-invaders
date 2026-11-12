@@ -1,0 +1,9 @@
+{
+  "source": "mock",
+  "seed": 1,
+  "width": 480,
+  "height": 160,
+  "frames": 10,
+  "bytes": 21568,
+  "sha256": "2daeffe2cd71600183e0b4682b02e40f3d436136958e86e6a6d7012ce25c4f22"
+}

@@ -1,95 +1,44 @@
 # 贡献指南
 
-感谢你愿意参与这个项目。无论是提 issue、报 bug 还是提 PR，都欢迎。
+## 先读决策记录
+
+本仓库的架构与边界锁定在 [docs/adr/0000-rewrite-baseline.md](docs/adr/0000-rewrite-baseline.md)。
+**凡与该文档冲突的提案，先改文档，再改代码**，不要用「先跑通再说」绕过约束。
 
 ## 开发环境
 
-需要 **Node.js ≥ 22**（用到内置的 `node:test`）。不需要装 Python，也不需要装
-`node-gyp` 之类的东西 —— `@napi-rs/canvas` 是预编译二进制。
+需要 Node.js ≥ 22，不需要 Python、不需要原生编译工具链（运行时依赖为零）。
 
 ```bash
-git clone https://github.com/h1s97x/gh-space-invaders.git
-cd gh-space-invaders
-npm install
+git clone https://cnb.cool/h1s97x/plugins/space-invaders.git
+cd space-invaders
+npm ci
+npm run check        # typecheck + 测试 + 参数表一致性
 ```
 
-## 常用命令
+## 改动落点
 
-| 命令 | 作用 |
-|---|---|
-| `npm run build` | 类型检查 + 编译到 `dist/` |
-| `npm test` | 跑单元测试（32 个，约3~5 秒） |
-| `npm run check` | `build` + `test` 一起跑，提交前请务必执行 |
-| `npm run offline` | 用假数据生成一份 GIF |
-| `npm run dev -- --offline` | tsx 直跑，改完立刻看效果 |
+| 想做什么 | 改哪里 | 不要动 |
+|---|---|---|
+| 加平台 | `src/sources/` 加模块 + `sources/index.ts` 注册 | `domain/` / `render/` / `cli/` |
+| 改玩法 | `src/domain/` | `contract/` 之外的层 |
+| 加输出 | `src/render/` 加目录 + `render/index.ts` 注册 | 具体玩法模块 |
+| 改参数 | `src/cli/args.ts`，然后 `npm run docs` | README 里的参数表（自动生成） |
 
-## 提 Issue 之前
+## 硬约束
 
-跑一遍 `npm run check`，如果失败，把报错贴进 issue —— 这能省掉一轮来回。
+- 内核只认 `CONTRIB_*`；`src/` 不得出现平台判断、平台输出变量或另一套参数前缀。
+- `domain/` 不 import `sources/`；`render/` 不 import 具体玩法。
+- `package.json` 的 `dependencies` 必须保持 `{}`。
+- 产物只写一个文件；提交、上传、输出变量交给平台流水线。
+- 玩法规则不得引入参考项目的常量、策略名、坐标系或节奏（有测试静态拦截）。
 
-## 提交规范
-
-用 [Conventional Commits](https://www.conventionalcommits.org/)：
-
-```
-<type>(<scope>): <简短描述>
-
-type: feat | fix | docs | test | ci | chore | refactor | perf | style
-```
-
-例子：
-
-```
-feat(engine): 支持自定义策略权重
-fix(gif): 修正 300+ 色时的透明索引冲突
-test(strategy): 补 random 策略清场顺序的回归测试
-docs(readme): 更新实测数据
-```
-
-**一个提交只做一件事。** 不要把「改逻辑 + 改格式 + 加测试」混在一个提交里——
-评审和日后回溯都会痛苦得多。
-
-## 代码风格
-
-- **TypeScript 严格模式**，不允许 `any`（必要时用 `unknown` + 类型收窄）。
-- 缩进 2 空格，单引号，分号。
-- **注释写「为什么」，不写「是什么」。** 代码本身已经说了是什么。
-- 注释里如果提到灵感到某个开源项目，请注明出处（见 `NOTICE`），保持风格一致。
-
-## 改动玩法逻辑时，务必补回归测试
-
-这个项目是从一个玩法模型演进出来的，历史上踩过好几个很难查的坑，都已经写成测试钉住了：
-
-| 坑 | 锁它的测试 |
-|---|---|
-| 默认策略被误设为 `column`，轨迹变成"从左到右一排一排清" | `strategy.test.ts` |
-| 策略活锁，帧数暴涨但几乎不开火 | `strategy.test.ts` |
-| 贡献分档丢失，出现 hp40 这种值 | `strategy.test.ts` |
-| 先减血再读血量，`score` 恒为 0 | `strategy.test.ts` |
-
-改动这些地方时，先看 `test/strategy.test.ts` 里对应的用例。**新增 bug 一定要补一条回归测试**，
-否则它一定会再回来。
-
-## 涉及 GIF 体积的改动
-
-先量再改，别凭感觉：
+## 提交前
 
 ```bash
-npm run offline -- --colors 16 -o /tmp/a.gif
-npm run offline -- --colors 32 -o /tmp/b.gif
-ls -l /tmp/a.gif /tmp/b.gif
+npm run check     # 必须全绿
+npm run golden    # 只有渲染确实变了才更新 test/golden/mock.json，并在 PR 里说明原因
+docker build -t space-invaders:local .
 ```
 
-另外注意 `gif.ts` 里的脏矩形差分靠**透明索引**实现，**不要**改用 `dispose=2`
-（那会强制每帧全量编码，体积直接翻倍）。
-
-## Pull Request
-
-1. 从 `main` 开分支：`feat/xxx` / `fix/xxx` / `docs/xxx`
-2. `npm run check` 必须通过
-3. PR 描述里说清：**改了什么**、**为什么**、**怎么验证的**
-4. 涉及画面变化的，附一张前后对比 GIF（把 `--seed` 一起写上，便于复现）
-
-## 行为准则
-
-参与即表示同意 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
+改了渲染却没更新黄金摘要，`check` 会失败；改了参数表却没跑 `npm run docs`，`docs:check` 会失败。
