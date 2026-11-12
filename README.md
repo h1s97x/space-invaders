@@ -24,6 +24,21 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 
 `npm run check` 会先编译；只做类型检查用 `npm run typecheck`。
 
+## 效果图
+
+两张都是**完整动画**（不是冒烟用的 10 帧截断版），用真实数据按默认参数生成：
+
+**CNB 活跃日历** — 98 个目标 / 394 帧
+
+![CNB 效果图](docs/assets/contrib-cnb.gif)
+
+**GitHub 贡献日历** — 222 个目标 / 885 帧
+
+![GitHub 效果图](docs/assets/contrib-github.gif)
+
+静态预览：[CNB PNG](docs/assets/contrib-cnb.png) · [GitHub PNG](docs/assets/contrib-github.png)。
+两张 GIF 为文档展示资产，不参与构建与镜像分发。
+
 ## 参数（由 `src/cli/args.ts` 自动生成，勿手改）
 
 <!--options-->

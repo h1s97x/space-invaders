@@ -33,7 +33,7 @@ export const defaultTheme: Readonly<Theme> = {
   cluster: [126, 231, 135],
   boss: [214, 245, 180],
   pad: 6,
-  cellMin: 6,
+  cellMin: 2,
   cellMax: 24,
   rows: 7,
   reservedBottom: 12,
@@ -50,7 +50,13 @@ export interface Layout {
   shipY: number;
 }
 
-/** 低分辨率画布的布局；列宽有上限，日历很长时不会把格子拉成横条。 */
+/**
+ * 低分辨率画布的布局。
+ *
+ * 列宽既要设上限（日历很短时不把格子拉成横条），也必须能收缩到放得下整年：
+ * 53 列 × 6px = 318px 会超出默认 240px 画布，后面的列会被画到画布外、
+ * 整帧看起来是空的。`cellMin` 因此取 2，让 `fit` 真正决定长窗口的列宽。
+ */
 export function layoutFor(columns: number, ctx: RenderContext, theme: Theme): Layout {
   const usableWidth = ctx.width - theme.pad * 2;
   const usableHeight = ctx.height - theme.pad * 2 - theme.reservedBottom;

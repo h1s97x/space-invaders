@@ -362,3 +362,21 @@ space-invaders/
 - 需要具 `contents:write` 的 GitHub PAT 后运行 `./sync-github.sh`，或由维护者手动同步。
 
 当前状态：**第 9 节 10 条验收全部打勾；代码、文档、两侧 CI、归档均完成；仅分发端点一次文档同步待凭据**。
+
+---
+
+## 13. 效果图与长窗口修复（2026-11-12）
+
+- 为回答「效果图在哪」，两张完整图作为**文档资产**入库 `docs/assets/`：
+  `contrib-cnb.gif`（98 目标 / 394 帧 / 480×160）、
+  `contrib-github.gif`（222 目标 / 885 帧 / 480×160），另附两张 PNG 静态预览。
+  `.gitignore` 只对这四个文件开口子，`dist/` 与临时 GIF 仍不入库。
+- **首次出图发现缺陷**：一年 53 列 × `cellMin=6` = 318px 超出默认 240px 画布，
+  后面的列被画到画布外，CNB 图中段帧几乎空白。把 `cellMin` 改为 2，
+  让列宽由 `floor(usableWidth / columns)` 决定；短窗口（columns=2）仍受 `cellMax` 约束，
+  所以黄金帧不变，`npm run check` 22 个测试全绿。
+- 校验：两张 GIF 均为 `GIF89a` / 480×160 / 帧数与生成器一致 / Trailer 存在；
+  第 200 帧非背景像素 4527 与 4610、颜色数 13 与 14，画面非空。
+- GitHub 图的数据来自公开贡献页（369 天、9,420 次贡献、222 个有贡献日），归一成
+  `calendar.json` 后走 `file` 源 —— GitHub PAT 已按用户要求删除，本地无凭据。
+  `source=github` 的 GraphQL 路径此前已用 PAT 验证（221 个目标），两者因滚动窗口边界差 1 天。
