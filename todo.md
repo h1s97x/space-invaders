@@ -20,12 +20,15 @@
   `docs:check` 通过，CNB CI `cnb-l4g-1k77k619n` success。
 - 两个旧仓（`cnb-space-invaders`、`cnb-profile-3d-contrib`）已归档（`status: 1`），
   公告已贴、`#13` / `#18` 已带结论关闭；重写前历史保存在 `legacy/pre-rewrite`（`8d63e8a`）。
-- **三件最紧急的人工动作**（详见第 4 节 P0）：
+- **剩余两件最紧急的人工动作**（详见第 4 节 P0）：
   1. 打 `v*` tag 触发 `.cnb.yml` 发布插件镜像 —— 目前 `space-invaders:latest` **根本不存在**。
   2. 统一版本号并补 tag —— 文档引用的 `uses:...@v0.1.0` 这个 ref **不存在**。
-  3. 用新的 `contents:write` PAT 同步 GitHub 分发端点（仍停在 `f240167`）。
+- **第 3 件已完成**（2026-11-12 晚）：用 GitHub PAT 同步了分发端点
+  （同步时 `main` / `latest` = `206c9d3`，后续提交以 `git ls-remote` 为准），
+  并补推 `legacy/pre-rewrite`；GitHub Actions CI success。详见 P0-3 / P2-2。
 - **安全**：本次对话里明文出现过 3 个令牌（两个 CNB、一个 GitHub），
-  本地副本已删，但都应视为已泄露，需在平台侧吊销/轮换。
+  其中 GitHub PAT 刚用于同步；本地副本已删，但都应视为已泄露，
+  **必须立即在平台侧吊销/轮换**。
 
 ---
 
@@ -35,9 +38,9 @@
 |---|---|
 | 唯一源（CNB 主仓） | `https://cnb.cool/h1s97x/plugins/space-invaders`（交接时 `main = d546791`，以 `git log -1` 为准） |
 | 本地 `git remote` | 仍是旧 slug `.../gh-space-invaders.git`，靠 301 重定向工作；**新环境请 clone 新 slug** |
-| 历史分支 | `legacy/pre-rewrite` → `8d63e8a`（只在 CNB 主仓） |
+| 历史分支 | `legacy/pre-rewrite` → `8d63e8a`（CNB 主仓 + GitHub 分发端点都有） |
 | tag | **无任何 tag**（`git ls-remote --tags origin` 为空） |
-| GitHub 分发端点 | `h1s97x/space-invaders`，`main` / `latest` = `f240167`（滞后） |
+| GitHub 分发端点 | `h1s97x/space-invaders`，`main` / `latest` 已同步（同步时 `206c9d3`，以 `git ls-remote` 为准；仍无 tag） |
 | 制品库新镜像 | `docker.cnb.cool/h1s97x/plugins/space-invaders:latest` —— **未发布** |
 | 制品库旧镜像 | `docker.cnb.cool/h1s97x/plugins/cnb-space-invaders:latest` —— 仍可拉取（归档后冻结） |
 | 两个旧仓 | `status: 1` 已归档、只读 |
@@ -48,9 +51,9 @@
 - `CNB_TOKEN`：环境内置，**流水线临时令牌**。可读日历、写 issue/评论、push 代码；
   **归档等仓库管理接口会 403**（缺 `repo-code:rw,repo-manage:rw`），需个人访问令牌。
 - `CNB_API_ENDPOINT`：`https://api.cnb.cool`。
-- `GITHUB_TOKEN` / `GH_TOKEN`：**无**。`sync-github.sh` 需要 `contents:write` 的 PAT。
-- 个人 CNB PAT、GitHub PAT：本次签发过，**用完后要求吊销**；本地临时文件已删除，
-  仓库内容里扫不到任何令牌字符串。
+- `GITHUB_TOKEN` / `GH_TOKEN`：**无**（环境变量未设置）；本次同步用 600 权限临时文件里的
+  PAT 完成，文件已删除。`sync-github.sh` 仍需要 `contents:write` 的 PAT。
+- 个人 CNB PAT、GitHub PAT：本次签发并使用过，**必须吊销**；仓库内容里扫不到任何令牌字符串。
 - `cnb` CLI 已登录，Token 来源就是 `CNB_TOKEN` 环境变量；个人 PAT 可用
   `CNB_TOKEN=<pat> cnb ...` 临时覆盖。
 
@@ -144,19 +147,18 @@ GIT_CONFIG_VALUE_0='!cnb git-credential' git push origin HEAD:main
 **验收**：`git ls-remote --tags origin` 有 `v0.4.0`；`uses:...@v0.4.0` 可解析；三处版本号一致。
 **关联**：这一条做完才能做 P0-1（tag 同时是镜像发布触发器）。
 
-### P0-3 · GitHub 分发端点滞后（原待办，扩展）
+### P0-3 · GitHub 分发端点同步 —— 已完成（2026-11-12 晚）
 
-**现象**：CNB 主仓 `main` 远新于分发端点（交接时 `d546791` vs `f240167`）；
-新 README、`classic` 渲染器、四张图在 GitHub 侧网页都看不到。
-**根因**：`sync-github.sh` 需要 `contents:write` 的 `GITHUB_TOKEN`；此前签发的 PAT 已吊销，
-本地无凭据。CNB 主仓是唯一源，不受影响。
-**动作**：
-1. 签发短期 PAT（`contents:write`），用环境变量或 600 权限文件提供，**不要贴进对话**。
-2. `GITHUB_TOKEN=... ./sync-github.sh`，同步 `main` / `latest`（以及 P0-2 之后的 tag）。
-3. 复测旧 `uses:` 的 301 与新 `action.yml`（container action）是否生效。
-4. 可选：把 `legacy/pre-rewrite` 也推到分发端点（目前只有 CNB 主仓有）。
-5. 核对三处 HEAD 一致、GitHub Actions CI 跑的是新代码。
-**验收**：GitHub `HEAD` == CNB `HEAD`；README 四张图可见；CI success；用完吊销 PAT。
+**执行**：用户提供有效 GitHub PAT（`scopes: repo, user, workflow`，目标仓 `push=true`），
+运行 `sync-github.sh` 同步 `main` / `latest`，并单独推送 `legacy/pre-rewrite`。
+**实测**（同步完成时快照，后续文档提交会让 HEAD 前进）：三处 `HEAD` 均为 `206c9d3`；
+分发端点分支为 `main` / `latest` / `legacy/pre-rewrite`（后者 = `8d63e8a`）；
+GitHub Actions `CI` 在 `206c9d3` 上 `completed / success`。
+
+**仍未做（不阻塞下班）**：
+- 旧 `uses:` 的 301 与新 `action.yml`（container action）在真实工作流里跑一次，见 P1-2。
+- P0-2 打 tag 后需再跑一次 `sync-github.sh` 把 tag 带过去（当前 `tags [none]`）。
+- **立即吊销本次使用的 GitHub PAT**（明文出现在对话中）。
 
 ### P1-1 · 清场顺序导致构图偏右（原待办）
 
@@ -176,8 +178,9 @@ GIT_CONFIG_VALUE_0='!cnb git-credential' git push origin HEAD:main
 
 **背景**：CNB CI 与 GitHub Actions CI 都只跑 `npm run check` + `mock` 10 帧冒烟；
 真数据 `source=cnb` / `source=github` 的完整动画只在**本机**生成过。
-GitHub 侧 container action 因分发端点滞后 + 无 tag，**从未真正运行过**。
-**动作**：P0-1/P0-2/P0-3 完成后，在示例仓库各跑一次真实流水线
+分发端点已同步到新代码，但**无任何 tag**，`uses:@v0.x` 仍不可解析，
+container action 在真实工作流里**从未运行过**。
+**动作**：P0-1/P0-2 完成后，在示例仓库各跑一次真实流水线
 （GitHub `uses:@v0.4.0`、CNB `examples/pipelines/cnb.yml`），确认容器入口、
 `runs.env` / `PLUGIN_*` 前缀归一、产物落盘与提交都正常。
 **验收**：两侧各一次真数据端到端，产物 GIF 可解码。
@@ -199,10 +202,11 @@ GitHub 公开贡献页（无需 PAT）解析出的 369 天 / 9,420 次贡献，�
 - `README` 里 `npm run check` 标注 33 个测试；新增测试后记得同步该数字。
 - `SECURITY.md` 的私密漏洞链接指向 `h1s97x/space-invaders`（已改），可顺手确认。
 
-### P2-2 · 可选：分发端点补历史分支
+### P2-2 · 分发端点补历史分支 —— 已完成
 
-`legacy/pre-rewrite` 目前只在 CNB 主仓；若希望 GitHub 侧也能检出旧实现，
-在 P0-3 有 PAT 时显式推一次该分支即可。
+`legacy/pre-rewrite`（`8d63e8a`）已推到 GitHub 分发端点，
+`git ls-remote --heads https://github.com/h1s97x/space-invaders.git` 可见。
+两端都有重写前历史，旧 `main` 被强推覆盖的问题已消除。
 
 ---
 
