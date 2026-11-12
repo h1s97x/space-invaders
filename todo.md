@@ -15,7 +15,8 @@
 
 ## 0. 下班前速览
 
-- **全部成果已在 CNB 主仓**：`main = d546791`，工作区干净，33 个测试全绿，
+- **全部成果已在 CNB 主仓**：`main`（交接时 `d546791`；之后每次文档提交都会前进，
+  新环境一律以 `git log -1` 为准），工作区干净，33 个测试全绿，
   `docs:check` 通过，CNB CI `cnb-l4g-1k77k619n` success。
 - 两个旧仓（`cnb-space-invaders`、`cnb-profile-3d-contrib`）已归档（`status: 1`），
   公告已贴、`#13` / `#18` 已带结论关闭；重写前历史保存在 `legacy/pre-rewrite`（`8d63e8a`）。
@@ -32,7 +33,7 @@
 
 | 项 | 值 / 状态 |
 |---|---|
-| 唯一源（CNB 主仓） | `https://cnb.cool/h1s97x/plugins/space-invaders`，`main = d546791` |
+| 唯一源（CNB 主仓） | `https://cnb.cool/h1s97x/plugins/space-invaders`（交接时 `main = d546791`，以 `git log -1` 为准） |
 | 本地 `git remote` | 仍是旧 slug `.../gh-space-invaders.git`，靠 301 重定向工作；**新环境请 clone 新 slug** |
 | 历史分支 | `legacy/pre-rewrite` → `8d63e8a`（只在 CNB 主仓） |
 | tag | **无任何 tag**（`git ls-remote --tags origin` 为空） |
@@ -145,7 +146,7 @@ GIT_CONFIG_VALUE_0='!cnb git-credential' git push origin HEAD:main
 
 ### P0-3 · GitHub 分发端点滞后（原待办，扩展）
 
-**现象**：CNB 主仓 `main = d546791`，分发端点 `main` / `latest` = `f240167`；
+**现象**：CNB 主仓 `main` 远新于分发端点（交接时 `d546791` vs `f240167`）；
 新 README、`classic` 渲染器、四张图在 GitHub 侧网页都看不到。
 **根因**：`sync-github.sh` 需要 `contents:write` 的 `GITHUB_TOKEN`；此前签发的 PAT 已吊销，
 本地无凭据。CNB 主仓是唯一源，不受影响。
