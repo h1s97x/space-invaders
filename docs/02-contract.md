@@ -22,7 +22,7 @@
 | `CONTRIB_HEIGHT` | number 16..1024 | `256` | 低分辨率画布高（放大前，含 HUD、地平线与飞船区） |
 | `CONTRIB_MAX_FRAMES` | number 1..20000 | `4800` | 帧数硬上界，保证流水线有界 |
 | `CONTRIB_RULE` | string | `waves` | 规则注册表 id |
-| `CONTRIB_RENDERER` | string | `invader` | 渲染注册表 id |
+| `CONTRIB_RENDERER` | string | `invader` | `invader`（像素外星人）或 `classic`（贡献绿方块方阵），两种输出切换 |
 
 约定：
 

@@ -32,7 +32,7 @@ export const ARGS: readonly ArgSpec[] = Object.freeze([
   { name: 'height', type: 'number', default: 256, min: 16, max: 1024, description: '低分辨率画布高（放大前，含 HUD、地平线与飞船区）' },
   { name: 'max_frames', type: 'number', default: 4800, min: 1, max: 20000, description: '帧数硬上界' },
   { name: 'rule', type: 'string', default: 'waves', description: '规则注册表 id' },
-  { name: 'renderer', type: 'string', default: 'invader', description: '渲染注册表 id' },
+  { name: 'renderer', type: 'string', default: 'invader', values: ['invader', 'classic'], description: '渲染注册表 id；invader＝像素外星人，classic＝贡献绿方块方阵' },
 ]);
 
 export interface Config {

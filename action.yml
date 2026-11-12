@@ -61,7 +61,7 @@ inputs:
     required: false
     default: 'waves'
   renderer:
-    description: '渲染注册表 id'
+    description: '渲染注册表 id：invader（像素外星人）| classic（贡献绿方块方阵）'
     required: false
     default: 'invader'
 

@@ -2,6 +2,27 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.0] - 2026-11-12
+
+### 新增
+
+- **`classic` 渲染器**：还原重写前「贡献绿方块方阵」的观感（深黑底、星点、四档绿、
+  `SCORE` / `@h1s97x` HUD、蓝色小飞船）。与 `invader` 并存，
+  `CONTRIB_RENDERER=classic|invader` 切换；两者共享同一份 `Calendar` / `Level` / `Action`
+  契约，`domain/`、`sources/`、`cli/`、平台契约零改动，零新增依赖。
+- **`legacy/pre-rewrite` 分支**：保存重写前最后一个提交 `8d63e8a`
+  （含 `src/engine.ts`、`demo.gif`、旧 README 与 32 个回归测试），随时可检出运行。
+
+### 变更
+
+- `CONTRIB_RENDERER` 改为显式枚举，非法值报错不静默回落。
+- 新增 3 个 classic 回归测试（共 33 个）；四张效果图（两渲染器 × 两平台）入库。
+
+### 说明
+
+`sync-github.sh` 对 GitHub 分发端点的 `main` / `latest` 使用 `--force`（单向镜像），
+CNB 主仓一直是普通 fast-forward push，历史完整；归档分支只在唯一源（CNB 主仓）维护。
+
 ## [0.3.0] - 2026-11-12
 
 ### ⚠️ 破坏性变更

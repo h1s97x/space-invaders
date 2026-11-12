@@ -12,7 +12,7 @@
 
 ```bash
 npm ci
-npm run check          # typecheck + 22 个测试 + 参数表一致性
+npm run check          # typecheck + 33 个测试 + 参数表一致性
 npm run golden         # 重生成黄金帧摘要
 
 CONTRIB_SOURCE=mock CONTRIB_MAX_FRAMES=10 node dist/src/cli/index.js
@@ -26,18 +26,36 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 
 ## 效果图
 
-两张都是 **1024×256 的完整动画**（不是冒烟用的 10 帧截断版），用真实数据按默认参数生成：
+两种渲染器通过 `CONTRIB_RENDERER` 切换，都能吃任意数据源。下面是真实数据、
+默认参数生成的 **1024×256 完整动画**（不是 10 帧冒烟版）。
+
+### `classic` · 贡献绿方块方阵
+
+还原重写前的极简观感：深黑底、星点、四档绿方块、`SCORE` / 署名 HUD、底部蓝色小飞船。
 
 **CNB 活跃日历** — 98 个目标 / 301 帧
 
-![CNB 效果图](docs/assets/contrib-cnb.gif)
+![classic CNB](docs/assets/classic-cnb.gif)
 
 **GitHub 贡献日历** — 222 个目标 / 668 帧
 
-![GitHub 效果图](docs/assets/contrib-github.gif)
+![classic GitHub](docs/assets/classic-github.gif)
 
-静态预览：[CNB PNG](docs/assets/contrib-cnb.png) · [GitHub PNG](docs/assets/contrib-github.png)。
-两张 GIF 为文档展示资产，不参与构建与镜像分发。
+### `invader`（默认）· 像素外星人
+
+8×8 三型两帧精灵、深空分层背景、飞船滑行残影与激光轨迹。
+
+**CNB 活跃日历** — 98 个目标 / 301 帧
+
+![invader CNB](docs/assets/contrib-cnb.gif)
+
+**GitHub 贡献日历** — 222 个目标 / 668 帧
+
+![invader GitHub](docs/assets/contrib-github.gif)
+
+静态预览：classic [CNB](docs/assets/classic-cnb.png) · [GitHub](docs/assets/classic-github.png)；
+invader [CNB](docs/assets/contrib-cnb.png) · [GitHub](docs/assets/contrib-github.png)。
+四张 GIF 为文档展示资产，不参与构建与镜像分发。
 
 ## 参数（由 `src/cli/args.ts` 自动生成，勿手改）
 
@@ -58,7 +76,7 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 | `CONTRIB_HEIGHT` | number | `256` | 16..1024 | 低分辨率画布高（放大前，含 HUD、地平线与飞船区） |
 | `CONTRIB_MAX_FRAMES` | number | `4800` | 1..20000 | 帧数硬上界 |
 | `CONTRIB_RULE` | string | `waves` | string | 规则注册表 id |
-| `CONTRIB_RENDERER` | string | `invader` | string | 渲染注册表 id |
+| `CONTRIB_RENDERER` | string | `invader` | invader \| classic | 渲染注册表 id；invader＝像素外星人，classic＝贡献绿方块方阵 |
 
 <!--/options-->
 

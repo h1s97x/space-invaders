@@ -12,3 +12,5 @@ dist/
 .tmp-preview.mjs
 !docs/assets/contrib-cnb.gif
 !docs/assets/contrib-github.gif
+!docs/assets/classic-cnb.gif
+!docs/assets/classic-github.gif

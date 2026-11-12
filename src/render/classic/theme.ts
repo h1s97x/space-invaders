@@ -1,0 +1,93 @@
+/**
+ * classic 渲染器主题：还原重写前那种「贡献日历就是敌人」的极简观感。
+ *
+ * 深黑底 + 星点 + 四档绿方块 + 左上 SCORE / 右上署名 + 底部小飞船。
+ * 数值与几何由本项目自定（按画布宽度自适应），不沿用旧实现的 860×230 常量。
+ */
+
+import type { RGB } from '../codec/types.js';
+import type { RenderContext } from '../../contract/action.js';
+
+export interface ClassicTheme {
+  background: RGB;
+  star: RGB;
+  /** 无贡献的空格 */
+  empty: RGB;
+  /** 已被清掉的格子 */
+  cleared: RGB;
+  /** 活跃度四档绿，由暗到亮 */
+  levels: readonly RGB[];
+  hud: RGB;
+  ship: RGB;
+  bullet: RGB;
+  pad: number;
+  gap: number;
+  hudY: number;
+  gridTop: number;
+  shipY: number;
+  watermark: string;
+  starCount: number;
+}
+
+export const classicTheme: Readonly<ClassicTheme> = {
+  background: [10, 13, 20],
+  star: [214, 226, 244],
+  empty: [18, 24, 32],
+  cleared: [13, 18, 25],
+  levels: [
+    [22, 55, 40],
+    [35, 105, 62],
+    [46, 160, 67],
+    [57, 211, 83],
+  ],
+  hud: [198, 220, 248],
+  ship: [110, 190, 255],
+  bullet: [255, 232, 140],
+  pad: 24,
+  gap: 2,
+  hudY: 16,
+  gridTop: 56,
+  shipY: 216,
+  watermark: '@h1s97x',
+  starCount: 110,
+};
+
+export interface ClassicLayout {
+  cell: number;
+  stepX: number;
+  stepY: number;
+  gridLeft: number;
+  gridTop: number;
+}
+
+/** 53 列铺满画布宽度，方块保持正方形；行数固定 7（周）。 */
+export function classicLayout(
+  columns: number,
+  ctx: RenderContext,
+  theme: ClassicTheme,
+): ClassicLayout {
+  const usable = ctx.width - theme.pad * 2;
+  const stepX = Math.max(4, Math.floor(usable / Math.max(1, columns)));
+  const cell = Math.max(3, stepX - theme.gap);
+  const stepY = Math.min(
+    stepX,
+    Math.max(cell + theme.gap, Math.floor((theme.shipY - theme.gridTop - 12) / 7)),
+  );
+  return {
+    cell,
+    stepX,
+    stepY,
+    gridLeft: Math.max(theme.pad, Math.floor((ctx.width - stepX * Math.max(1, columns)) / 2)),
+    gridTop: theme.gridTop,
+  };
+}
+
+/** 活跃度 → 四档绿，与 invader 的 tier 分档无关。 */
+export function levelOfHeat(heat: number, theme: ClassicTheme): RGB {
+  // 贡献值是长尾分布，线性分档会让大半画面落在最暗一档；sqrt 提亮中低活跃度
+  const index = Math.min(
+    theme.levels.length - 1,
+    Math.floor(Math.sqrt(heat) * theme.levels.length),
+  );
+  return theme.levels[Math.max(0, index)]!;
+}

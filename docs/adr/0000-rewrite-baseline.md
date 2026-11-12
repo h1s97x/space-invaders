@@ -442,3 +442,48 @@ GitHub 668 帧 / 3.8MB；Pillow 解码中段帧目视确认怪物轮廓、HUD、
 **未变**：`contract/` / `sources/` / `domain/` / 平台契约 / 零运行时依赖；
 美术资产仍只参考两个自有旧仓（见 `docs/04-rewrite-record.md` 第 6 节）。
 **已知限制照旧**：清场顺序按列，敌人集中在右半边，本轮仍未越界改 `domain/`。
+
+---
+
+## 16. 历史分支与双渲染器（2026-11-12 晚）
+
+**用户指出**：重写前的历史应该单独开分支保存；`sync-github.sh` 用了 `--force`，
+不该没先建归档分支就推。这一点成立，属于我的疏忽。
+
+### 事实核对
+
+- CNB 主仓（唯一源）一直是普通 fast-forward push：`8d63e8a` 仍在 `main` 的父链里，
+  旧实现、32 个回归测试、`demo.gif` 从未丢失，git 历史完整。
+- 被强推覆盖的只有 **GitHub 分发端点**的 `main` / `latest`（单向镜像，非唯一源），
+  目前停在 `f240167`；该端点没有其它分支。
+- 但「有历史」不等于「有明确可检出入口」，用户要求的独立分支此前确实不存在。
+
+### 补救
+
+- 新建并推送 `legacy/pre-rewrite` → `8d63e8a`，分支内含 `src/engine.ts` / `demo.gif` /
+  旧 README 与 32 个回归测试，随时可 checkout 运行。`sync-github.sh` 只推
+  `main` / `latest` / tags，不会碰该分支。
+- GitHub 分发端点暂不建该分支（需要 `contents:write` PAT，用户已吊销旧令牌）；
+  旧历史以 CNB 主仓为准。若要两端都有，后续显式推一次即可。
+
+### 「两个都做到」的落地
+
+主干新增 `src/render/classic/`，与 `invader` **并存**：
+
+| | `classic` | `invader`（默认） |
+|---|---|---|
+| 观感 | 深黑底 + 星点 + 四档绿方块方阵 + `SCORE` / `@h1s97x` + 蓝色小飞船 | 8×8 外星人精灵 + 深空分层背景 + 轨迹特效 |
+| 共享 | 同一份 `Calendar` / `Level` / `Action` / `RenderContext`、同一套 codec | 同左 |
+| 改动面 | 只新增 `render/classic/` 三个文件 + 注册表一行 + `args.ts` 枚举 | 不变 |
+
+`CONTRIB_RENDERER=classic|invader` 切换，`domain/`、`sources/`、`cli/`、平台契约全部零改动，
+零新增依赖 —— 这是第 7 节「三个注册表」可执行性的实证，也回答了「加输出只加一个模块」。
+classic 为自研实现，未复制旧仓源码，也不沿用 `860×230` 等上游几何常量。
+
+### 验收
+
+`npm run check` 33 个测试全绿（新增 3 个 classic 回归：两渲染器并存、绿方块/星点/HUD/飞船、
+非法 renderer 报错）；四张 `1024×256` 效果图（两渲染器 × 两平台）已入库：
+classic CNB 301 帧 / 717KB、classic GitHub 668 帧 / 1.6MB，
+invader CNB 301 帧 / 1.7MB、invader GitHub 668 帧 / 3.8MB。
+classic 首帧经 Pillow 解码目视确认绿方阵观感成立。

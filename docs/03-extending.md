@@ -21,7 +21,8 @@
    `frames(level, actions, ctx): Iterable<Frame>`。只认 `Level` / `Action`，
    不 import 任何玩法模块。
 2. 在 `src/render/index.ts` 注册。
-3. 在 `src/cli/args.ts` 的 `renderer` 默认值/说明里更新，跑 `npm run docs`。
+3. 在 `src/cli/args.ts` 的 `renderer` 枚举 `values` 里加上 id，跑 `npm run docs`。
+   现有两种输出（`invader` / `classic`）可直接照抄 `src/render/classic/` 的形状。
 4. 加一条测试证明「注册后 `renderers.get(id)` 可用」（`test/e2e.test.ts` 有范例）。
 
 `Frame` 是完整 RGBA 画面；放大、调色板与 GIF 编码由 `render/codec/` 统一处理，
