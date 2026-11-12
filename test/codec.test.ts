@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { encodeGif, lzwCompress, type GifFrame } from '../src/render/codec/gif.js';
 import { buildPalette, FALLBACK_INDEX, toIndices, upscale } from '../src/render/codec/pixels.js';
+import type { RGB } from '../src/render/codec/types.js';
 import { createSurface } from '../src/render/codec/raster.js';
 
 function frame(indices: Uint8Array, palette: Uint8Array, delay = 50): GifFrame {
@@ -58,6 +59,23 @@ test('lzwCompress 首码是 clear code，压缩比随重复度提升', () => {
   const firstCode = (compressed[0]! | (compressed[1]! << 8)) & 0x1ff;
   assert.equal(firstCode, 1 << 8);
   assert.ok(lzwCompress(noisy, 8).length > compressed.length);
+});
+
+test('预留色优先进入调色板，不会被高频背景色阶挤出', () => {
+  const accent: RGB = [255, 160, 72];
+  const data = new Uint8ClampedArray(8 * 4);
+  for (let i = 0; i < 7; i += 1) {
+    const gray = 20 + i * 20;
+    data.set([gray, gray, gray, 255], i * 4);
+  }
+  data.set([...accent, 255], 7 * 4);
+
+  // limit=3 只放得下 2 个实色；不预留时暖色按 key 排序必被灰阶挤掉
+  const plain = buildPalette(data, 3);
+  const reserved = buildPalette(data, 3, [accent]);
+  const key = (accent[0] << 16) | (accent[1] << 8) | accent[2];
+  assert.equal(plain.map.has(key), false);
+  assert.ok(reserved.map.has(key), '预留的暖色必须保真');
 });
 
 test('透明像素落索引 0，纯白不透明不是透明色', () => {

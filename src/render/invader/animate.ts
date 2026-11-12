@@ -1,26 +1,36 @@
 /**
- * 帧序列生成（v2）：Level + Action[] → 完整 RGBA 帧。
+ * 帧序列生成（v3）：Level + Action[] → 完整 RGBA 帧。
  *
- * 每帧是一张完整低分辨率画面，交给 codec 统一放大与编码。
+ * 深空分层底图只算一次；三层星点、地平线、两帧精灵、激光、爆炸、
+ * 飞船滑行 + 残影 + 尾焰逐帧叠加。所有随机来自 level.seed 的自研 xorshift。
  * 只认 contract/ 的 Level 与 Action，不 import 具体玩法模块。
- * 所有随机都来自 level.seed 派生的自研 xorshift，同一输入永远同一段动画。
  */
 
 import { createSurface } from '../codec/raster.js';
 import { enemyKindOf, type Action, type Frame, type Level, type RenderContext, type Tier } from '../../contract/action.js';
 import { colorForKind, defaultTheme, layoutFor, type Layout, type Theme } from './theme.js';
+import { createBackdrop, createStars, driftStars, drawHorizon } from './backdrop.js';
 import {
-  drawBullet,
   drawBursts,
   drawEnemy,
   drawGrid,
   drawHud,
+  drawLaser,
   drawShip,
+  drawShipTrail,
   drawStars,
   drawText,
+  drawThruster,
   type Burst,
   type Star,
 } from './sprites.js';
+
+interface Beam {
+  x: number;
+  fromY: number;
+  toY: number;
+  age: number;
+}
 
 interface State {
   remaining: Map<string, number>;
@@ -28,12 +38,13 @@ interface State {
   columnTargets: Map<number, number>;
   shipX: number;
   shipTarget: number;
+  history: number[];
   score: number;
   combo: number;
   wave: number;
   cleared: number;
   bursts: Burst[];
-  bullet: { column: number; row: number; age: number } | null;
+  beam: Beam | null;
   stars: Star[];
   random: () => number;
 }
@@ -48,39 +59,31 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-function makeStars(ctx: RenderContext, theme: Theme, random: () => number): Star[] {
-  return Array.from({ length: theme.starCount }, () => {
-    const brightness = 0.3 + random() * 0.7;
-    return {
-      x: random() * ctx.width,
-      y: random() * ctx.height,
-      brightness,
-      size: random() < 0.82 ? 1 : 2,
-      speed: theme.starSpeed * (0.4 + brightness),
-    };
-  });
-}
-
 function step(state: State, ctx: RenderContext, theme: Theme): void {
-  for (const star of state.stars) {
-    star.y += star.speed;
-    if (star.y > ctx.height) {
-      star.y = -2;
-      star.x = state.random() * ctx.width;
-    }
-  }
+  driftStars(state.stars, ctx, state.random);
+
   state.bursts = state.bursts
     .map((burst) => ({ ...burst, age: burst.age + 1 }))
     .filter((burst) => burst.age < theme.explosionFrames);
-  if (state.bullet) {
-    state.bullet.age += 1;
-    if (state.bullet.age >= theme.bulletFrames) state.bullet = null;
+  if (state.beam) {
+    state.beam.age += 1;
+    if (state.beam.age > theme.bulletFrames) state.beam = null;
   }
-  state.shipX += (state.shipTarget - state.shipX) * 0.36;
+
+  // 飞船每帧都朝目标推进一点：连续开火帧里也在滑行，轨迹才不是「瞬移」。
+  const delta = state.shipTarget - state.shipX;
+  if (Math.abs(delta) > 0.02) {
+    state.shipX += Math.sign(delta) * Math.min(Math.abs(delta), Math.max(0.7, Math.abs(delta) * 0.45));
+  } else {
+    state.shipX = state.shipTarget;
+  }
+  state.history.push(state.shipX);
+  if (state.history.length > theme.trailFrames) state.history.shift();
 }
 
 function paint(
   surface: ReturnType<typeof createSurface>,
+  backdrop: Uint8ClampedArray,
   level: Level,
   ctx: RenderContext,
   state: State,
@@ -88,8 +91,9 @@ function paint(
   theme: Theme,
   frameIndex: number,
 ): Frame {
-  surface.fill(theme.background);
+  surface.data.set(backdrop);
   drawStars(surface, state.stars, theme);
+  drawHorizon(surface, ctx, layout, theme, frameIndex);
   drawGrid(surface, layout, level.columns, state.clearedColumns, theme);
 
   const bob: 0 | 1 = frameIndex % 18 < 9 ? 0 : 1;
@@ -100,7 +104,7 @@ function paint(
       const kind = enemyKindOf(Math.min(3, left) as Tier);
       drawEnemy(
         surface,
-        layout.pad + target.column * layout.cell,
+        layout.gridLeft + target.column * layout.cell,
         layout.gridTop + target.row * layout.rowH,
         layout.cell,
         kind,
@@ -110,34 +114,33 @@ function paint(
     }
   }
 
-  if (state.bullet) {
-    const progress = state.bullet.age / theme.bulletFrames;
-    const x = layout.pad + state.bullet.column * layout.cell + layout.cell / 2;
-    const from = layout.shipY;
-    const to = layout.gridTop + state.bullet.row * layout.rowH + layout.cell / 2;
-    drawBullet(surface, x, from + (to - from) * (1 - progress), theme);
+  if (state.beam) {
+    const intensity = Math.max(0, 1 - state.beam.age / (theme.bulletFrames + 1));
+    drawLaser(surface, state.beam.x, state.beam.fromY, state.beam.toY, intensity, theme);
   }
-
   drawBursts(surface, state.bursts, theme);
-  drawShip(surface, layout.pad + state.shipX * layout.cell + layout.cell / 2, layout.shipY, layout.cell, theme);
+
+  const shipCx = layout.gridLeft + state.shipX * layout.cell + layout.cell / 2;
+  drawShipTrail(surface, state.history, layout, theme);
+  drawShip(surface, shipCx, layout.shipY, layout.cell, theme);
+  drawThruster(surface, shipCx, layout.shipY, layout.cell, theme, frameIndex);
 
   const total = level.waves.reduce((sum, wave) => sum + wave.targets.length, 0);
-  drawHud(
-    surface,
-    ctx.width,
-    layout,
-    {
-      score: state.score,
-      combo: state.combo,
-      wave: state.wave,
-      waves: level.columns,
-      cleared: state.cleared,
-      total,
-    },
-    theme,
-  );
+  drawHud(surface, ctx.width, layout, {
+    score: state.score,
+    combo: state.combo,
+    wave: state.wave,
+    waves: level.columns,
+    cleared: state.cleared,
+    total,
+  }, theme);
 
-  return { width: ctx.width, height: ctx.height, data: surface.data.slice(), delayMs: Math.max(20, Math.round(1000 / ctx.fps)) };
+  return {
+    width: ctx.width,
+    height: ctx.height,
+    data: surface.data.slice(),
+    delayMs: Math.max(20, Math.round(1000 / ctx.fps)),
+  };
 }
 
 export function* animate(
@@ -147,21 +150,24 @@ export function* animate(
   theme: Theme = defaultTheme,
 ): Generator<Frame, void, undefined> {
   const surface = createSurface(ctx.width, ctx.height);
+  const backdrop = createBackdrop(ctx, theme);
   const layout = layoutFor(level.columns, ctx, theme);
   const random = seededRandom(level.seed);
+  const startX = Math.floor(level.columns / 2);
   const state: State = {
     remaining: new Map(),
     clearedColumns: new Set(),
     columnTargets: new Map(),
-    shipX: Math.floor(level.columns / 2),
-    shipTarget: Math.floor(level.columns / 2),
+    shipX: startX,
+    shipTarget: startX,
+    history: [startX],
     score: 0,
     combo: 0,
     wave: 0,
     cleared: 0,
     bursts: [],
-    bullet: null,
-    stars: makeStars(ctx, theme, random),
+    beam: null,
+    stars: createStars(ctx, theme, random),
     random,
   };
 
@@ -173,7 +179,7 @@ export function* animate(
   }
 
   let emitted = 0;
-  const emit = (): Frame => paint(surface, level, ctx, state, layout, theme, emitted);
+  const emit = (): Frame => paint(surface, backdrop, level, ctx, state, layout, theme, emitted);
   yield emit();
   emitted += 1;
 
@@ -200,36 +206,32 @@ export function* animate(
           break;
         }
       }
-      state.bullet = { column: targetColumn, row: targetRow, age: 0 };
+      const cx = layout.gridLeft + targetColumn * layout.cell + layout.cell / 2;
+      const cy = layout.gridTop + targetRow * layout.rowH + layout.cell / 2;
+      state.beam = { x: cx, fromY: layout.shipY, toY: cy, age: 0 };
 
       if (left > 0 && next === 0) {
         state.cleared += 1;
         state.wave = Math.max(state.wave, targetColumn + 1);
-        const cx = layout.pad + targetColumn * layout.cell + layout.cell / 2;
-        const cy = layout.gridTop + targetRow * layout.rowH + layout.cell / 2;
         state.bursts.push({
           x: cx,
           y: cy,
           age: 0,
           angles: Array.from({ length: 9 }, () => random() * Math.PI * 2),
         });
-        if ((state.columnTargets.get(targetColumn) ?? 0) > 0) {
-          const allGone = level.waves
-            .flatMap((wave) => wave.targets)
-            .filter((target) => target.column === targetColumn)
-            .every((target) => (state.remaining.get(target.key) ?? 0) === 0);
-          if (allGone) state.clearedColumns.add(targetColumn);
-        }
+        const allGone = level.waves
+          .flatMap((wave) => wave.targets)
+          .filter((target) => target.column === targetColumn)
+          .every((target) => (state.remaining.get(target.key) ?? 0) === 0);
+        if (allGone) state.clearedColumns.add(targetColumn);
       }
     }
 
+    step(state, ctx, theme);
     // rest 不单独出帧：状态继续推进，避免大量重复画面撑大 GIF
     if (action.kind !== 'rest') {
-      step(state, ctx, theme);
       yield emit();
       emitted += 1;
-    } else {
-      step(state, ctx, theme);
     }
 
     if (action.kind === 'finish' && emitted < ctx.maxFrames) {
@@ -241,9 +243,8 @@ export function* animate(
     }
   }
 
-  // 收尾字幕，避免最后一帧一闪而过
   if (emitted < ctx.maxFrames) {
-    drawText(surface, 'CLEAR', ctx.width / 2 - 18, layout.gridTop + layout.gridHeight / 2, theme.hud, 2);
+    drawText(surface, 'CLEAR', ctx.width / 2 - 36, layout.gridTop + layout.gridHeight / 2, theme.hud, 3);
     yield { width: ctx.width, height: ctx.height, data: surface.data.slice(), delayMs: 120 };
   }
 }

@@ -106,9 +106,10 @@ export interface Palette {
 export function buildPalette(
   frame: PixelBuffer,
   limit = 255,
+  reserve: readonly RGB[] = [],
 ): Palette {
   // 单帧版只是多帧版的特例：包一层迭代器即可
-  return buildPaletteFromFrames([frame], limit)
+  return buildPaletteFromFrames([frame], limit, reserve)
 }
 
 /**
@@ -121,6 +122,7 @@ export function buildPalette(
 export function buildPaletteFromFrames(
   frames: Iterable<PixelBuffer>,
   limit = 255,
+  reserve: readonly RGB[] = [],
 ): Palette {
   const counts = new Map<number, number>()
   // 每 4 字节一个像素，直接遍历
@@ -142,8 +144,20 @@ export function buildPaletteFromFrames(
   let next = 1
   let overflow = 0
 
+  // 预留色优先占坑：背景渐变、星云与抗锯齿边缘的色阶动辄数百种，
+  // 纯按频次排序会把激光、尾焰、爆炸这类「像素少但不能变色」的特效挤出
+  // 255 色表，量化成灰蓝后在动画里彻底消失。调用方把主题里的关键色传进来。
+  for (const color of reserve) {
+    if (next >= limit) break
+    const key = (color[0] << 16) | (color[1] << 8) | color[2]
+    if (key === TRANSPARENT || map.has(key)) continue
+    writeRGB(palette, next, color)
+    map.set(key, next)
+    next++
+  }
+
   for (const [key] of sorted) {
-    if (key === TRANSPARENT) continue
+    if (key === TRANSPARENT || map.has(key)) continue
     if (next >= limit) {
       overflow++
       continue

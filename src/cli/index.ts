@@ -13,6 +13,28 @@ import { rules } from '../domain/index.js';
 import { renderers } from '../render/index.js';
 import { encodeGif, type GifFrame } from '../render/codec/gif.js';
 import { buildPaletteFromFrames, toIndices, upscale, type Palette } from '../render/codec/pixels.js';
+import type { RGB } from '../render/codec/types.js';
+import { defaultTheme } from '../render/invader/theme.js';
+
+/**
+ * 低频却必须保真的特效色：激光、尾焰、爆炸、精灵与飞船主色。
+ * 不预留的话会被背景渐变/抗锯齿的数百种色阶挤出 255 色表，动画里全部消失。
+ */
+const ACCENT_COLORS: readonly RGB[] = Object.freeze([
+  defaultTheme.drone,
+  defaultTheme.cluster,
+  defaultTheme.boss,
+  defaultTheme.ship,
+  defaultTheme.shipWing,
+  defaultTheme.cockpit,
+  defaultTheme.thruster,
+  defaultTheme.bullet,
+  defaultTheme.bulletTrail,
+  defaultTheme.explosion,
+  defaultTheme.explosionCore,
+  defaultTheme.hud,
+  defaultTheme.horizon,
+] as RGB[]);
 
 /** 两遍流式：第一遍统计颜色，第二遍边放大边编码，帧不驻留内存。 */
 function* pixelFrames(frames: Iterable<Frame>, max: number): Generator<Uint8ClampedArray> {
@@ -28,7 +50,11 @@ function encodeSequence(
   makeFrames: () => Iterable<Frame>,
   cfg: Config,
 ): { buffer: Buffer; frames: number } {
-  const palette: Palette = buildPaletteFromFrames(pixelFrames(makeFrames(), cfg.maxFrames), 255);
+  const palette: Palette = buildPaletteFromFrames(
+    pixelFrames(makeFrames(), cfg.maxFrames),
+    255,
+    ACCENT_COLORS,
+  );
   let frames = 0;
 
   function* gifFrames(): Generator<GifFrame, void, undefined> {

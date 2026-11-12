@@ -41,17 +41,17 @@ inputs:
     required: false
     default: '20'
   scale:
-    description: '整数倍放大 1..8'
+    description: '整数倍放大 1..8（画布已够大，默认不放大）'
     required: false
-    default: '2'
+    default: '1'
   width:
-    description: '低分辨率画布宽（放大前，需容纳整年 53 列）'
+    description: '低分辨率画布宽（放大前，53 列 × 16px 全览）'
     required: false
-    default: '512'
+    default: '1024'
   height:
-    description: '低分辨率画布高（放大前，含 HUD 与飞船区）'
+    description: '低分辨率画布高（放大前，含 HUD、地平线与飞船区）'
     required: false
-    default: '128'
+    default: '256'
   max_frames:
     description: '帧数硬上界'
     required: false
