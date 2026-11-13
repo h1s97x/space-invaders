@@ -29,9 +29,9 @@ export const ARGS: readonly ArgSpec[] = Object.freeze([
   { name: 'fps', type: 'number', default: 20, min: 10, max: 50, description: '播放帧率' },
   { name: 'scale', type: 'number', default: 1, min: 1, max: 8, description: '整数倍放大（画布已够大，默认不放大）' },
   { name: 'width', type: 'number', default: 1024, min: 32, max: 2048, description: '低分辨率画布宽（放大前，53 列 × 16px 全览）' },
-  { name: 'height', type: 'number', default: 256, min: 16, max: 1024, description: '低分辨率画布高（放大前，含 HUD、地平线与飞船区）' },
+  { name: 'height', type: 'number', default: 256, min: 16, max: 1024, description: '低分辨率画布高（放大前，含顶部留白与飞船区）' },
   { name: 'max_frames', type: 'number', default: 4800, min: 1, max: 20000, description: '帧数硬上界' },
-  { name: 'rule', type: 'string', default: 'waves', description: '规则注册表 id' },
+  { name: 'rule', type: 'string', default: 'shuffle', description: '规则注册表 id；shuffle＝按 seed 洗牌（默认），spread＝中心扩散，waves＝逐列' },
   { name: 'renderer', type: 'string', default: 'invader', values: ['invader', 'classic'], description: '渲染注册表 id；invader＝像素外星人，classic＝贡献绿方块方阵' },
 ]);
 
