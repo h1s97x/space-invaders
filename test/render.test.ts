@@ -155,16 +155,17 @@ test('整年真数据的中段帧不是空白，且逐帧阶段完整', () => {
   const level = buildLevel(YEAR, 1);
   assert.ok(level.columns >= 50);
 
-  const phases = [...expand([...simulateLevel(level)], Math.floor(level.columns / 2))];
-  const firstLaunch = phases.findIndex((p) => p.kind === 'launch');
-  assert.ok(firstLaunch > 0, '应存在发射帧');
-  assert.ok(phases.slice(0, firstLaunch).some((p) => p.kind === 'travel'), '飞船必须先匀速到位');
-  const firstImpact = phases.findIndex((p) => p.kind === 'impact');
-  assert.ok(firstImpact > firstLaunch, '命中必须晚于发射');
-  assert.ok(phases.slice(firstLaunch, firstImpact).some((p) => p.kind === 'flight'), '命中前子弹必须在飞');
+  const actionList = [...simulateLevel(level)];
+  const phases = [...expand(actionList, Math.floor(level.columns / 2))];
+  const fireKeys = actionList.filter((a) => a.kind === 'fire').map((a) => a.target);
+  const impactKeys = phases.flatMap((p) => p.impacts.map((a) => a.target));
+  assert.deepEqual(impactKeys, fireKeys, '每发都在到达帧结算，且命中顺序等于发射顺序');
+  assert.ok(phases.some((p) => p.bullets.length >= 2), '应允许多颗子弹同时在飞');
+  assert.ok(phases.every((p) => p.bullets.every((b) => b.progress >= 0 && b.progress < 1)),
+    '在飞子弹进度落在 0..1，命中帧不再绘制');
 
   const frames = [...animate(level, simulateLevel(level), ctx)];
-  assert.equal(frames.length, Math.min(phases.length, ctx.maxFrames), '每个动画阶段恰好出一帧');
+  assert.equal(frames.length, Math.min(phases.length, ctx.maxFrames), '每个时间线帧恰好出一帧');
   const middle = frames[Math.floor(frames.length / 2)]!;
   assert.equal(middle.width, ctx.width);
   assert.equal(middle.height, ctx.height);
@@ -176,4 +177,14 @@ test('整年真数据的中段帧不是空白，且逐帧阶段完整', () => {
     if (g > 150 && g > r + 30) enemyPixels += 1;
   }
   assert.ok(enemyPixels > 100, `中段帧敌人像素 ${enemyPixels} 过少`);
+
+  // 怪物按列错峰：相邻帧有局部切帧，但不能退回全盘同步切换
+  const a = frames[0]!.data;
+  const b = frames[1]!.data;
+  let animatedPixels = 0;
+  for (let i = 0; i < a.length; i += 4) {
+    if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2]) animatedPixels += 1;
+  }
+  assert.ok(animatedPixels > 0, '怪物应恢复动画');
+  assert.ok(animatedPixels < 12000, `变化像素 ${animatedPixels} 过多，疑似全盘同步切帧`);
 });

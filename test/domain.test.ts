@@ -76,8 +76,9 @@ test('simulateLevel 按 seed 洗牌可复现、连击总数正确且视觉命中
 
   const many = buildLevel(MANY_COLUMNS, 7);
   const order = moves([...simulateLevel(many)]);
-  assert.equal(order.length, many.waves.length, '每个有目标的列恰好访问一次');
-  assert.deepEqual([...order].sort((a, b) => a - b), many.waves.map((w) => w.index));
+  assert.deepEqual([...new Set(order)].sort((a, b) => a - b), many.waves.map((w) => w.index));
+  assert.ok(order.length > many.waves.length, '按发点射应产生比列数更多的移动');
+  assert.ok(order.length > new Set(order).size, '同一列应被分批访问，而不是一次清完');
   const other = moves([...simulateLevel(buildLevel(MANY_COLUMNS, 999))]);
   assert.notDeepEqual(order, other, '不同 seed 应得到不同清场顺序');
   assert.notDeepEqual(order, [...order].sort((a, b) => a - b), '默认顺序不应退化为逐列');
