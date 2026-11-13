@@ -1,6 +1,7 @@
 /**
- * 渲染层回归（v3）：锁住四组曾经出问题的地方
- * ① 精灵溢出格子糊成一团；② 飞船退化/无轨迹；③ 背景单薄；④ 中段帧空白。
+ * 渲染层回归：锁住五组曾经出问题的地方
+ * ① 精灵溢出格子；② 飞船退化；③ 装饰层回归；④ 中段帧空白；
+ * ⑤ 瞬发子弹与阶段顺序（ADR 0000 第 18、19 节）。
  */
 
 import { test } from 'node:test';
@@ -11,18 +12,12 @@ import { dateKeyOf, type Calendar } from '../src/contract/calendar.js';
 import { buildLevel } from '../src/domain/model.js';
 import { simulateLevel } from '../src/domain/simulate.js';
 import { defaultTheme, layoutFor } from '../src/render/invader/theme.js';
-import { createBackdrop, createStars, drawHorizon } from '../src/render/invader/backdrop.js';
+import { createBackdrop } from '../src/render/invader/backdrop.js';
+import * as backdropModule from '../src/render/invader/backdrop.js';
 import { animate } from '../src/render/invader/animate.js';
-import {
-  drawEnemy,
-  drawHud,
-  drawLaser,
-  drawShip,
-  drawShipTrail,
-  drawStars,
-  drawText,
-  drawThruster,
-} from '../src/render/invader/sprites.js';
+import { expand } from '../src/render/motion.js';
+import * as sprites from '../src/render/invader/sprites.js';
+import { drawBullet, drawEnemy, drawShip } from '../src/render/invader/sprites.js';
 
 const ctx: RenderContext = { width: 1024, height: 256, scale: 1, fps: 20, maxFrames: 4800 };
 
@@ -76,9 +71,9 @@ test('全览大画布：53 列每格 16px、网格居中、飞船区不越界', 
   const layout = layoutFor(53, ctx, defaultTheme);
   assert.equal(layout.cell, 16);
   assert.ok(layout.gridWidth <= ctx.width - layout.pad * 2);
-  assert.ok(layout.gridLeft > layout.pad, '网格应水平居中，两侧留白给星云');
+  assert.ok(layout.gridLeft > layout.pad, '网格应水平居中');
   assert.ok(layout.shipY + layout.cell <= ctx.height);
-  assert.ok(layout.horizonY > layout.shipY, '地平线在飞船下方');
+  assert.ok(layout.shipY > layout.gridTop);
 });
 
 test('8×8 精灵精确填满格子，不再溢出到邻格', () => {
@@ -104,60 +99,76 @@ test('三类敌人与两帧动画都有面积且互不相同', () => {
   assert.notDeepEqual([...results[0]!], [...frame1]);
 });
 
-test('飞船有翼有机身，残影 / 尾焰 / 激光轨迹都能落像素', () => {
+test('飞船建模与子弹仍在，零数据装饰的绘制函数已移除', () => {
   const layout = layoutFor(53, ctx, defaultTheme);
   const ship = withSurface((s) => drawShip(s, 200, layout.shipY, layout.cell, defaultTheme));
   assert.ok(bbox(ship).width >= 12, '飞船横向跨度不足');
+  assert.ok(opaquePixels(withSurface((s) =>
+    drawBullet(s, 200, layout.gridTop + 40, defaultTheme))) > 60, '子弹与三段拖尾应可见');
 
-  assert.ok(opaquePixels(withSurface((s) =>
-    drawShipTrail(s, [10, 11, 12, 13], layout, defaultTheme))) > 20);
-  assert.ok(opaquePixels(withSurface((s) =>
-    drawThruster(s, 200, layout.shipY, layout.cell, defaultTheme, 3))) > 10);
-  assert.ok(opaquePixels(withSurface((s) =>
-    drawLaser(s, 200, layout.shipY, layout.gridTop + 40, 1, defaultTheme))) > 100);
+  for (const name of [
+    'drawHud', 'drawText', 'drawLaser', 'drawGrid', 'drawStars',
+    'drawShipTrail', 'drawThruster',
+  ]) {
+    assert.equal(name in sprites, false, `${name} 不应再导出`);
+  }
 });
 
-test('深空分层背景：渐变星云、扫描线、地平线与三层星点', () => {
+test('背景只有纯色底与静态星点，不再有渐变 / 地平线', () => {
   const backdrop = createBackdrop(ctx, defaultTheme);
-  assert.ok(distinctColors(backdrop) >= 20, '渐变 + 星云应产生丰富色阶');
+  const again = createBackdrop(ctx, defaultTheme);
+  assert.deepEqual([...backdrop.subarray(0, 4096)], [...again.subarray(0, 4096)], '静态底图可复现');
 
-  const layout = layoutFor(53, ctx, defaultTheme);
-  const horizon = withSurface((s) => drawHorizon(s, ctx, layout, defaultTheme, 10));
-  assert.ok(opaquePixels(horizon) > 500, '地平线光带与透视线应可见');
-
-  let seed = 7;
-  const random = (): number => {
-    seed = (seed * 1103515245 + 12345) % 2147483648;
-    return seed / 2147483648;
-  };
-  const stars = createStars(ctx, defaultTheme, random);
-  assert.equal(stars.length, defaultTheme.starCount);
-  const speeds = new Set(stars.map((star) => star.speed.toFixed(4)));
-  assert.ok(speeds.size >= 3, '三层星点速度应不同以形成视差');
-
-  const starPixels = withSurface((s) => drawStars(s, stars, defaultTheme));
-  assert.ok(opaquePixels(starPixels) > 100);
+  let backgroundPixels = 0;
+  for (let i = 0; i < backdrop.length; i += 4) {
+    if (
+      backdrop[i] === defaultTheme.background[0] &&
+      backdrop[i + 1] === defaultTheme.background[1] &&
+      backdrop[i + 2] === defaultTheme.background[2]
+    ) backgroundPixels += 1;
+  }
+  assert.ok(backgroundPixels > ctx.width * ctx.height * 0.99, '纯色底应占绝大多数像素');
+  assert.ok(distinctColors(backdrop) < 100, '不应再有渐变 / 星云的数百色阶');
+  assert.equal('drawHorizon' in backdropModule, false);
+  assert.equal('createStars' in backdropModule, false);
 });
 
-test('HUD 与点阵文字能落像素', () => {
-  const layout = layoutFor(53, ctx, defaultTheme);
-  const hud = withSurface((s) =>
-    drawHud(s, ctx.width, layout, { score: 120, combo: 7, wave: 12, waves: 53, cleared: 30, total: 98 }, defaultTheme),
-  );
-  assert.ok(opaquePixels(hud) > 300);
-  assert.ok(opaquePixels(withSurface((s) => drawText(s, 'SCORE 0120', 8, 8, defaultTheme.hud, 2))) > 100);
+test('不再有 HUD：点阵字形已移除，顶部留白没有进度条色带', () => {
+  const level = buildLevel(YEAR, 1);
+  const frames = [...animate(level, simulateLevel(level), ctx)];
+  const middle = frames[Math.floor(frames.length / 2)]!;
+  const backdrop = createBackdrop(ctx, defaultTheme);
+  const row = layoutFor(53, ctx, defaultTheme).gridTop - 4;
+  let changed = 0;
+  for (let x = 0; x < ctx.width; x += 1) {
+    const i = (row * ctx.width + x) * 4;
+    if (
+      middle.data[i] !== backdrop[i] ||
+      middle.data[i + 1] !== backdrop[i + 1] ||
+      middle.data[i + 2] !== backdrop[i + 2]
+    ) changed += 1;
+  }
+  assert.ok(changed < 40, `顶部第 ${row} 行有 ${changed} 个非背景像素，疑似 HUD 色带`);
 });
 
-test('整年真数据的中段帧不是空白，且画面有层次', () => {
+test('整年真数据的中段帧不是空白，且逐帧阶段完整', () => {
   const level = buildLevel(YEAR, 1);
   assert.ok(level.columns >= 50);
 
+  const phases = [...expand([...simulateLevel(level)], Math.floor(level.columns / 2))];
+  const firstLaunch = phases.findIndex((p) => p.kind === 'launch');
+  assert.ok(firstLaunch > 0, '应存在发射帧');
+  assert.ok(phases.slice(0, firstLaunch).some((p) => p.kind === 'travel'), '飞船必须先匀速到位');
+  const firstImpact = phases.findIndex((p) => p.kind === 'impact');
+  assert.ok(firstImpact > firstLaunch, '命中必须晚于发射');
+  assert.ok(phases.slice(firstLaunch, firstImpact).some((p) => p.kind === 'flight'), '命中前子弹必须在飞');
+
   const frames = [...animate(level, simulateLevel(level), ctx)];
-  assert.ok(frames.length > 20);
+  assert.equal(frames.length, Math.min(phases.length, ctx.maxFrames), '每个动画阶段恰好出一帧');
   const middle = frames[Math.floor(frames.length / 2)]!;
   assert.equal(middle.width, ctx.width);
   assert.equal(middle.height, ctx.height);
-  assert.ok(distinctColors(middle.data) >= 20, '应有渐变背景、星云、网格、敌人、飞船、HUD 等多层');
+  assert.ok(distinctColors(middle.data) >= 8, '应有背景、星点、怪物、飞船等层次');
 
   let enemyPixels = 0;
   for (let i = 0; i < middle.data.length; i += 4) {

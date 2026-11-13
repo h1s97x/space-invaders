@@ -1,4 +1,4 @@
-/** classic 渲染器回归：两种输出并存，且 classic 保持「绿方块方阵」的观感。 */
+/** classic 渲染器回归：两种输出并存，且 classic 保持「绿方块方阵」的极简观感。 */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,6 +8,7 @@ import { buildLevel } from '../src/domain/model.js';
 import { simulateLevel } from '../src/domain/simulate.js';
 import { renderers } from '../src/render/index.js';
 import { animate as classicAnimate } from '../src/render/classic/animate.js';
+import { classicTheme } from '../src/render/classic/theme.js';
 import { parseArgs } from '../src/cli/args.js';
 
 const ctx: RenderContext = { width: 1024, height: 256, scale: 1, fps: 20, maxFrames: 4800 };
@@ -31,27 +32,43 @@ test('两种渲染器都注册，同一 Level 都能产出帧', () => {
   const classic = [...renderers.get('classic').frames(level, simulateLevel(level), ctx)];
   assert.ok(invader.length > 10);
   assert.ok(classic.length > 10);
+  assert.equal(classic.length, invader.length, '两渲染器共用同一份逐帧阶段展开');
   assert.equal(classic[0]!.width, ctx.width);
   assert.equal(classic[0]!.height, ctx.height);
   assert.notDeepEqual([...classic[0]!.data], [...invader[0]!.data], '两种输出应确实不同');
 });
 
-test('classic 画面有绿方块、星点、署名 HUD 与蓝色飞船', () => {
+test('classic 只留绿方块、飞船与子弹，不含星点 / HUD', () => {
   const level = buildLevel(YEAR, 1);
   const frames = [...classicAnimate(level, simulateLevel(level), ctx)];
+  assert.ok(frames.length > 60, '滑行 / 弹道 / 冷却应产生逐帧画面');
   const first = frames[0]!.data;
   let green = 0;
   let ship = 0;
-  let pale = 0;
+  let topNoise = 0;
   for (let i = 0; i < first.length; i += 4) {
     const r = first[i]!, g = first[i + 1]!, b = first[i + 2]!;
     if (g > r + 20 && g > b + 10 && g > 60) green += 1;
     if (b > r + 60 && b > 180) ship += 1;
-    if (r > 150 && g > 170 && b > 200) pale += 1;
+    const y = Math.floor(i / 4 / ctx.width);
+    if (y < classicTheme.gridTop && (
+      r !== classicTheme.background[0] ||
+      g !== classicTheme.background[1] ||
+      b !== classicTheme.background[2]
+    )) topNoise += 1;
   }
   assert.ok(green > 500, `绿方块像素 ${green} 过少`);
   assert.ok(ship > 20, `飞船像素 ${ship} 过少`);
-  assert.ok(pale > 50, `星点 / HUD 像素 ${pale} 过少`);
+  assert.equal(topNoise, 0, `顶部 ${classicTheme.gridTop}px 应只有背景色（星点 / HUD 已删）`);
+
+  let bulletPixels = 0;
+  for (const frame of frames.slice(0, 120)) {
+    for (let i = 0; i < frame.data.length; i += 4) {
+      const r = frame.data[i]!, g = frame.data[i + 1]!, b = frame.data[i + 2]!;
+      if (r > 200 && g > 180 && b < 180) bulletPixels += 1;
+    }
+  }
+  assert.ok(bulletPixels > 0, '清场过程中应出现子弹');
 
   // 清场过程中绿方块应逐渐减少，说明命中确实生效
   const last = frames[frames.length - 1]!.data;
