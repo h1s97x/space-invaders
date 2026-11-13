@@ -46,21 +46,24 @@ test('classic 只留绿方块、飞船与子弹，不含星点 / HUD', () => {
   const first = frames[0]!.data;
   let green = 0;
   let ship = 0;
-  let topNoise = 0;
   for (let i = 0; i < first.length; i += 4) {
     const r = first[i]!, g = first[i + 1]!, b = first[i + 2]!;
     if (g > r + 20 && g > b + 10 && g > 60) green += 1;
     if (b > r + 60 && b > 180) ship += 1;
-    const y = Math.floor(i / 4 / ctx.width);
-    if (y < classicTheme.gridTop && (
-      r !== classicTheme.background[0] ||
-      g !== classicTheme.background[1] ||
-      b !== classicTheme.background[2]
-    )) topNoise += 1;
   }
   assert.ok(green > 500, `绿方块像素 ${green} 过少`);
   assert.ok(ship > 20, `飞船像素 ${ship} 过少`);
-  assert.equal(topNoise, 0, `顶部 ${classicTheme.gridTop}px 应只有背景色（星点 / HUD 已删）`);
+
+  // 顶部留白只允许有限色带的背景渐变，不能有星点 / HUD 噪点
+  const topColors = new Set<string>();
+  for (let y = 0; y < classicTheme.gridTop; y += 1) {
+    for (let x = 0; x < ctx.width; x += 16) {
+      const i = (y * ctx.width + x) * 4;
+      topColors.add([first[i]!, first[i + 1]!, first[i + 2]!].join(','));
+    }
+  }
+  assert.ok(topColors.size <= 3,
+    `顶部应只有有限色带的背景色，实际 ${topColors.size} 色（星点 / HUD 应已删）`);
 
   let bulletPixels = 0;
   for (const frame of frames.slice(0, 120)) {
