@@ -36,7 +36,7 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 只留极淡深空渐变、四档绿方块（每次命中退化一档）、Galaga 风小飞船、
 黄色胶囊子弹与命中爆炸；不画星点、分数与署名 HUD。
 
-**CNB 活跃日历** — 99 个目标 / 846 帧
+**CNB 活跃日历** — 99 个目标 / 849 帧
 
 ![classic CNB](docs/assets/classic-cnb.gif)
 
@@ -46,10 +46,10 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 
 ### `invader`（默认）· 像素外星人
 
-8×8 三型两帧精灵按列错峰波浪、极淡深空渐变与静态星点、逐帧飞行的子弹与命中爆炸；
-不画 HUD、网格、光带与滚动线等装饰。
+8×8 三型两帧精灵按列错峰波浪、极淡深空渐变、逐帧飞行的子弹与命中爆炸；
+飞船与背景同 `classic`，不画 HUD、网格、星点、光带与滚动线等装饰。
 
-**CNB 活跃日历** — 99 个目标 / 760 帧
+**CNB 活跃日历** — 99 个目标 / 761 帧
 
 ![invader CNB](docs/assets/contrib-cnb.gif)
 

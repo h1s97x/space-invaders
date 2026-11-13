@@ -112,6 +112,16 @@
   GitHub 3081 帧 / 4.08MB）；渐变 `(10,13,20) → (19,25,38)`、顶部 40 行跨 30 帧不变，
   体积 +1.2–1.6%、脏矩形不变、首帧用色 30 → 40/44；`invader` 产物未动。
   已按批次提交并推送（见下）。
+- **【2026-11-13 第十三轮 · 以 classic 为基准统一 contrib 系列】** 用户更正：上一轮
+  「另一个风格的 gif」指的是 **`contrib-*.gif`（invader）**，不是 classic；
+  `classic` 定格在第 28 节状态、一行不动。按 `docs/adr/0000-rewrite-baseline.md`
+  第 29 节：`invader` 飞船换成 classic 的 Galaga 风与配色 `[68,147,248]`、
+  背景对齐 classic（只留 8 色带渐变，删星点与基准线）。发布继续冻结。
+  验收：33 个测试全绿、四张图重出（`invader` CNB 761 / GitHub 2619 帧，
+  `classic` CNB 849 / GitHub 3081 帧）；四张图渐变一致 `(10,13,20)→(19,25,38)`、
+  顶部 20 行跨 30 帧不变；`invader` 首帧用色 62/64 → 39、体积略降。
+  目视确认两系列飞船同为 Galaga 风 `[68,147,248]`；`classic` 代码一行未动。
+  已按批次提交并推送。
 - **全部成果已在 CNB 主仓**：`main`（交接时 `d546791`；之后每次文档提交都会前进，
   新环境一律以 `git log -1` 为准），工作区干净，33 个测试全绿，
   `docs:check` 通过，CNB CI `cnb-l4g-1k77k619n` success。
@@ -369,7 +379,7 @@ CONTRIB_RENDERER=classic CONTRIB_SOURCE=file CONTRIB_CALENDAR=/tmp/gh-calendar.j
 
 默认画布 `1024×256`、`scale=1`；`CONTRIB_RENDERER=invader|classic`；
 真数据 CNB 99 目标 / GitHub 221 目标（2026-11-13 抓取）。
-静态深空背景后帧数：`classic` CNB 846 / GitHub 3081，`invader` CNB 760 / GitHub 2619。
+视觉统一后帧数：`classic` CNB 849 / GitHub 3081，`invader` CNB 761 / GitHub 2619。
 
 **验证 GIF 正确性的固定做法**（避免再次出现「渲染好看但 GIF 全黑」）
 

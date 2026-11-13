@@ -101,6 +101,14 @@
   只算一次、每帧复用，零差分。第 26 节「`classic` 不动」由本节取代。
 - 两张 `classic` 图重出（CNB 846 帧 / 1.21MB、GitHub 3081 帧 / 4.08MB），
   体积 +1.2–1.6%、脏矩形不变；`invader` 未改。
+- **以 classic 为基准统一 contrib 系列**（[ADR 0000 第 29 节](docs/adr/0000-rewrite-baseline.md)）：
+  用户更正「另一个风格」指的是 `contrib-*.gif`；`classic` 定格为基准、一行未动。
+  `invader` 飞船换成 classic 的 Galaga 风画法与配色 `[68,147,248]`，
+  删除 `shipWing` / `cockpit` 字段并精简 `ACCENT_COLORS` 为 8 色；
+  背景对齐 classic（只留 8 色带 `[10,13,20] → [19,25,38]`，删 140 颗星点与 1px 基准线）。
+- 四张图重出（统一调色板）：`invader` CNB 761 帧 / 1.36MB、GitHub 2619 帧 / 5.86MB；
+  `classic` CNB 849 帧 / 1.21MB、GitHub 3081 帧 / 4.08MB。
+  两个系列背景与飞船视觉一致，区别只在怪物造型。
 - **发布冻结**：打 tag 与发布镜像等画面验收通过后再执行；`package.json` 与示例 `uses:`
   的版本号仍未统一（见 `todo.md` P0-1 / P0-2）。
 
