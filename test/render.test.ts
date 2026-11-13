@@ -114,23 +114,38 @@ test('飞船建模与子弹仍在，零数据装饰的绘制函数已移除', ()
   }
 });
 
-test('背景只有纯色底与静态星点，不再有渐变 / 地平线', () => {
+test('静态深空底图：有限色带渐变、分档星点、1px 基准线，旧装饰不回归', () => {
   const backdrop = createBackdrop(ctx, defaultTheme);
   const again = createBackdrop(ctx, defaultTheme);
   assert.deepEqual([...backdrop.subarray(0, 4096)], [...again.subarray(0, 4096)], '静态底图可复现');
 
-  let backgroundPixels = 0;
-  for (let i = 0; i < backdrop.length; i += 4) {
-    if (
-      backdrop[i] === defaultTheme.background[0] &&
-      backdrop[i + 1] === defaultTheme.background[1] &&
-      backdrop[i + 2] === defaultTheme.background[2]
-    ) backgroundPixels += 1;
+  const at = (x: number, y: number): number[] => {
+    const i = (y * ctx.width + x) * 4;
+    return [backdrop[i]!, backdrop[i + 1]!, backdrop[i + 2]!];
+  };
+  const top = at(3, 1);
+  const bottom = at(3, ctx.height - 2);
+  assert.ok(bottom[2]! > top[2]!, '应有自上而下略微提亮的深渐变');
+  assert.ok(distinctColors(backdrop) < 20,
+    '渐变必须量化成有限色带、星点必须分档，不能产生数百色阶');
+
+  // 基准线：整行恰好 1px、静态常量色，不是光带
+  const rows: number[] = [];
+  for (let y = 0; y < ctx.height; y += 1) {
+    let hits = 0;
+    for (let x = 0; x < ctx.width; x += 16) {
+      const [r, g, b] = at(x, y);
+      if (r === defaultTheme.baseline[0] &&
+          g === defaultTheme.baseline[1] &&
+          b === defaultTheme.baseline[2]) hits += 1;
+    }
+    if (hits > 32) rows.push(y);
   }
-  assert.ok(backgroundPixels > ctx.width * ctx.height * 0.99, '纯色底应占绝大多数像素');
-  assert.ok(distinctColors(backdrop) < 100, '不应再有渐变 / 星云的数百色阶');
+  assert.deepEqual(rows, [defaultTheme.baselineY], '基准线应只有 1px、静态、无光带');
+
   assert.equal('drawHorizon' in backdropModule, false);
   assert.equal('createStars' in backdropModule, false);
+  assert.equal('driftStars' in backdropModule, false);
 });
 
 test('不再有 HUD：点阵字形已移除，顶部留白没有进度条色带', () => {

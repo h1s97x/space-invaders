@@ -8,7 +8,7 @@ import { buildLevel } from '../src/domain/model.js';
 import { simulateLevel } from '../src/domain/simulate.js';
 import { renderers } from '../src/render/index.js';
 import { animate as classicAnimate } from '../src/render/classic/animate.js';
-import { classicTheme } from '../src/render/classic/theme.js';
+import { classicLayout, classicTheme } from '../src/render/classic/theme.js';
 import { parseArgs } from '../src/cli/args.js';
 
 const ctx: RenderContext = { width: 1024, height: 256, scale: 1, fps: 20, maxFrames: 4800 };
@@ -79,6 +79,21 @@ test('classic 只留绿方块、飞船与子弹，不含星点 / HUD', () => {
     if (g > r + 20 && g > b + 10 && g > 60) lastGreen += 1;
   }
   assert.ok(lastGreen < green, '清场后绿方块应减少');
+
+  // 单个方块应随每次命中退化一档绿（改前颜色恒按热度，只有有 / 无两态）
+  const target = level.waves.flatMap((w) => w.targets)
+    .sort((a, b) => b.tier - a.tier || b.heat - a.heat)[0]!;
+  const layout = classicLayout(level.columns, ctx, classicTheme);
+  const x = layout.gridLeft + target.column * layout.stepX + Math.floor(layout.cell / 2);
+  const y = layout.gridTop + target.row * layout.stepY + Math.floor(layout.cell / 2);
+  const greens = new Set(classicTheme.levels.map((c) => c.join(',')));
+  const seen = new Set<string>();
+  for (const frame of frames) {
+    const i = (y * ctx.width + x) * 4;
+    const key = [frame.data[i]!, frame.data[i + 1]!, frame.data[i + 2]!].join(',');
+    if (greens.has(key)) seen.add(key);
+  }
+  assert.ok(seen.size >= 2, `单个方块应随命中退化出多档绿，实际 ${seen.size} 档`);
 });
 
 test('renderer 参数只接受两种输出，非法值立即报错', () => {
