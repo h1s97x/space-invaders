@@ -17,7 +17,7 @@ import type { RGB } from '../render/codec/types.js';
 import { defaultTheme } from '../render/invader/theme.js';
 
 /**
- * 数据层主色：怪物、飞船、子弹与爆炸。纯色底不再产生数百种色阶，
+ * 数据层主色：怪物、飞船、子弹与爆炸。背景只用有限色带渐变与分档星点，
  * 这里只保留主题色，确保量化时低频特效色不被近似掉。
  */
 const ACCENT_COLORS: readonly RGB[] = Object.freeze([
