@@ -1,77 +1,75 @@
 /**
  * classic 帧序列：把贡献日历本身画成敌人方阵。
  *
- * 与 invader 共享同一份 `Level` / `Action[]` 契约，但完全不画外星人、
- * 星云或 HUD 进度条 —— 只保留深黑底、星点、四档绿方块、SCORE / 署名与蓝色小飞船。
- * 飞船每帧持续滑行（不是瞬移），子弹是一条短亮线，命中后方块变暗。
+ * 与 invader 共享同一份 `Level` / `Action[]` 契约和 `render/motion.ts` 的逐帧阶段，
+ * 但不画外星人、星点、分数 / 署名 HUD —— 只留深黑底、四档绿方块、蓝色小飞船、
+ * 逐帧上移的子弹与命中爆炸（ADR 0000 第 17、18 节）。
  */
 
 import { createSurface } from '../codec/raster.js';
 import type { Action, Frame, Level, RenderContext } from '../../contract/action.js';
-import { drawText, textWidth } from '../invader/sprites.js';
+import { expand, type Phase } from '../motion.js';
 import { classicLayout, classicTheme, levelOfHeat, type ClassicTheme } from './theme.js';
 
-interface Star {
+interface Bullet {
   x: number;
-  y: number;
-  brightness: number;
-  size: number;
-  speed: number;
+  fromY: number;
+  toY: number;
+  progress: number;
 }
 
-interface Beam {
+interface Burst {
   x: number;
   y: number;
   age: number;
+  angles: readonly number[];
 }
 
 interface State {
   remaining: Map<string, number>;
   byCell: Map<string, { key: string; heat: number }>;
   shipX: number;
-  shipTarget: number;
-  score: number;
-  beam: Beam | null;
-  stars: Star[];
+  bullet: Bullet | null;
+  bursts: Burst[];
 }
 
-function seededRandom(seed: number): () => number {
-  let state = (seed >>> 0) || 1;
-  return () => {
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    return (state >>> 0) / 4_294_967_296;
-  };
+interface Placement {
+  column: number;
+  row: number;
 }
 
-function makeStars(ctx: RenderContext, theme: ClassicTheme, random: () => number): Star[] {
-  return Array.from({ length: theme.starCount }, () => {
-    const brightness = 0.35 + random() * 0.65;
-    return {
-      x: random() * ctx.width,
-      y: random() * ctx.height,
-      brightness,
-      size: random() < 0.85 ? 1 : 2,
-      speed: 0.08 + brightness * 0.22,
-    };
-  });
+function step(state: State): void {
+  state.bursts = state.bursts
+    .map((burst) => ({ ...burst, age: burst.age + 1 }))
+    .filter((burst) => burst.age < 4);
 }
 
-function step(state: State, ctx: RenderContext): void {
-  for (const star of state.stars) {
-    star.y += star.speed;
-    if (star.y > ctx.height) star.y = -2;
+function drawBullet(
+  surface: ReturnType<typeof createSurface>,
+  bullet: Bullet,
+  theme: ClassicTheme,
+): void {
+  const y = bullet.fromY + (bullet.toY - bullet.fromY) * bullet.progress;
+  for (let i = 3; i >= 1; i -= 1) {
+    surface.rect(bullet.x - 1, y + i * 6 - 3, bullet.x + 1, y + i * 6 + 3, theme.bullet, 0.45 / i);
   }
-  if (state.beam) {
-    state.beam.age += 1;
-    if (state.beam.age > 3) state.beam = null;
-  }
-  const delta = state.shipTarget - state.shipX;
-  if (Math.abs(delta) > 0.02) {
-    state.shipX += Math.sign(delta) * Math.min(Math.abs(delta), Math.max(0.7, Math.abs(delta) * 0.45));
-  } else {
-    state.shipX = state.shipTarget;
+  surface.rect(bullet.x - 2, y - 6, bullet.x + 2, y + 6, theme.bullet, 0.4);
+  surface.rect(bullet.x - 1, y - 5, bullet.x + 1, y + 5, theme.bullet);
+}
+
+function drawBursts(
+  surface: ReturnType<typeof createSurface>,
+  bursts: readonly Burst[],
+  theme: ClassicTheme,
+): void {
+  for (const burst of bursts) {
+    const fade = Math.max(0, 1 - burst.age / 4);
+    const radius = 2 + burst.age * 3;
+    for (const angle of burst.angles) {
+      const px = burst.x + Math.cos(angle) * radius;
+      const py = burst.y + Math.sin(angle) * radius;
+      surface.rect(px - 1, py - 1, px + 1, py + 1, theme.bullet, fade);
+    }
   }
 }
 
@@ -84,22 +82,6 @@ function paint(
 ): Frame {
   const layout = classicLayout(level.columns, ctx, theme);
   surface.fill(theme.background);
-
-  for (const star of state.stars) {
-    const levelValue = Math.round(255 * star.brightness);
-    surface.rect(
-      star.x,
-      star.y,
-      star.x + star.size,
-      star.y + star.size,
-      [
-        Math.round((theme.star[0] * levelValue) / 255),
-        Math.round((theme.star[1] * levelValue) / 255),
-        Math.round((theme.star[2] * levelValue) / 255),
-      ],
-      star.brightness,
-    );
-  }
 
   for (let column = 0; column < level.columns; column += 1) {
     for (let row = 0; row < 7; row += 1) {
@@ -116,10 +98,8 @@ function paint(
     }
   }
 
-  if (state.beam) {
-    const alpha = Math.max(0, 1 - state.beam.age / 4);
-    surface.rect(state.beam.x - 1, state.beam.y, state.beam.x + 1, theme.shipY - 8, theme.bullet, alpha);
-  }
+  drawBursts(surface, state.bursts, theme);
+  if (state.bullet) drawBullet(surface, state.bullet, theme);
 
   const shipX = layout.gridLeft + state.shipX * layout.stepX + layout.stepX / 2;
   surface.polygon(
@@ -127,16 +107,62 @@ function paint(
     theme.ship,
   );
 
-  drawText(surface, `SCORE ${String(state.score).padStart(4, '0')}`, theme.pad, theme.hudY, theme.hud, 2);
-  const mark = theme.watermark.toUpperCase();
-  drawText(surface, mark, ctx.width - theme.pad - textWidth(mark, 2), theme.hudY, theme.hud, 2);
-
   return {
     width: ctx.width,
     height: ctx.height,
     data: surface.data.slice(),
     delayMs: Math.max(20, Math.round(1000 / ctx.fps)),
   };
+}
+
+function applyPhase(
+  phase: Phase,
+  state: State,
+  targets: ReadonlyMap<string, Placement>,
+  layout: { gridLeft: number; gridTop: number; stepX: number; stepY: number; cell: number },
+  theme: ClassicTheme,
+): void {
+  switch (phase.kind) {
+    case 'start':
+      return;
+    case 'travel':
+      state.shipX = phase.from + (phase.to - phase.from) * phase.progress;
+      return;
+    case 'launch':
+    case 'flight': {
+      const key = phase.action.target ?? '';
+      const at = targets.get(key);
+      const column = at?.column ?? (phase.kind === 'launch' ? phase.column : Math.round(state.shipX));
+      state.bullet = {
+        x: layout.gridLeft + column * layout.stepX + layout.cell / 2,
+        fromY: theme.shipY - 8,
+        toY: layout.gridTop + (at?.row ?? 0) * layout.stepY + layout.cell / 2,
+        progress: phase.progress,
+      };
+      return;
+    }
+    case 'impact': {
+      const key = phase.action.target ?? '';
+      const left = state.remaining.get(key) ?? 0;
+      const dead = left > 0 && left - 1 === 0;
+      state.remaining.set(key, Math.max(0, left - 1));
+      state.bullet = null;
+
+      const at = targets.get(key);
+      const column = at?.column ?? Math.round(state.shipX);
+      const count = dead ? 9 : 4;
+      state.bursts.push({
+        x: layout.gridLeft + column * layout.stepX + layout.cell / 2,
+        y: layout.gridTop + (at?.row ?? 0) * layout.stepY + layout.cell / 2,
+        age: 0,
+        angles: Array.from({ length: count }, (_, i) => (i * Math.PI * 2) / count),
+      });
+      return;
+    }
+    case 'cooldown':
+    case 'tail':
+      return;
+  }
 }
 
 export function* animate(
@@ -147,74 +173,31 @@ export function* animate(
 ): Generator<Frame, void, undefined> {
   const surface = createSurface(ctx.width, ctx.height);
   const layout = classicLayout(level.columns, ctx, theme);
-  const random = seededRandom(level.seed);
   const startX = Math.floor(level.columns / 2);
   const state: State = {
     remaining: new Map(),
     byCell: new Map(),
     shipX: startX,
-    shipTarget: startX,
-    score: 0,
-    beam: null,
-    stars: makeStars(ctx, theme, random),
+    bullet: null,
+    bursts: [],
   };
 
+  const targets = new Map<string, Placement>();
   for (const wave of level.waves) {
     for (const target of wave.targets) {
       state.remaining.set(target.key, target.tier);
       state.byCell.set(`${target.column}:${target.row}`, { key: target.key, heat: target.heat });
+      targets.set(target.key, { column: target.column, row: target.row });
     }
   }
 
   let emitted = 0;
   const emit = (): Frame => paint(surface, level, ctx, state, theme);
-  yield emit();
-  emitted += 1;
-
-  for (const action of actions) {
+  for (const phase of expand(actions, startX)) {
     if (emitted >= ctx.maxFrames) return;
-
-    if (action.kind === 'move' && action.column !== undefined) {
-      state.shipTarget = action.column;
-    } else if (action.kind === 'fire' && action.target !== undefined) {
-      const left = state.remaining.get(action.target) ?? 0;
-      state.remaining.set(action.target, Math.max(0, left - 1));
-      state.score += 10;
-
-      let column = action.column ?? state.shipTarget;
-      let row = 0;
-      for (const wave of level.waves) {
-        const found = wave.targets.find((target) => target.key === action.target);
-        if (found) {
-          column = found.column;
-          row = found.row;
-          break;
-        }
-      }
-      state.beam = {
-        x: layout.gridLeft + column * layout.stepX + layout.cell / 2,
-        y: layout.gridTop + row * layout.stepY + layout.cell / 2,
-        age: 0,
-      };
-    }
-
-    step(state, ctx);
-    if (action.kind !== 'rest') {
-      yield emit();
-      emitted += 1;
-    }
-
-    if (action.kind === 'finish' && emitted < ctx.maxFrames) {
-      for (let tail = 0; tail < 4 && emitted < ctx.maxFrames; tail += 1) {
-        step(state, ctx);
-        yield emit();
-        emitted += 1;
-      }
-    }
-  }
-
-  if (emitted < ctx.maxFrames) {
-    drawText(surface, 'CLEAR', ctx.width / 2 - 36, layout.gridTop + 30, theme.hud, 3);
-    yield { width: ctx.width, height: ctx.height, data: surface.data.slice(), delayMs: 120 };
+    applyPhase(phase, state, targets, layout, theme);
+    if (phase.kind !== 'start') step(state);
+    yield emit();
+    emitted += 1;
   }
 }

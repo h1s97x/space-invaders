@@ -1,8 +1,8 @@
 /**
  * classic 渲染器主题：还原重写前那种「贡献日历就是敌人」的极简观感。
  *
- * 深黑底 + 星点 + 四档绿方块 + 左上 SCORE / 右上署名 + 底部小飞船。
- * 数值与几何由本项目自定（按画布宽度自适应），不沿用旧实现的 860×230 常量。
+ * 深黑底 + 四档绿方块 + 底部小飞船，不再画星点、分数与署名 HUD
+ * （ADR 0000 第 17 节）。数值与几何由本项目自定，不沿用旧实现的 860×230 常量。
  */
 
 import type { RGB } from '../codec/types.js';
@@ -10,28 +10,22 @@ import type { RenderContext } from '../../contract/action.js';
 
 export interface ClassicTheme {
   background: RGB;
-  star: RGB;
   /** 无贡献的空格 */
   empty: RGB;
   /** 已被清掉的格子 */
   cleared: RGB;
   /** 活跃度四档绿，由暗到亮 */
   levels: readonly RGB[];
-  hud: RGB;
   ship: RGB;
   bullet: RGB;
   pad: number;
   gap: number;
-  hudY: number;
   gridTop: number;
   shipY: number;
-  watermark: string;
-  starCount: number;
 }
 
 export const classicTheme: Readonly<ClassicTheme> = {
   background: [10, 13, 20],
-  star: [214, 226, 244],
   empty: [18, 24, 32],
   cleared: [13, 18, 25],
   levels: [
@@ -40,16 +34,12 @@ export const classicTheme: Readonly<ClassicTheme> = {
     [46, 160, 67],
     [57, 211, 83],
   ],
-  hud: [198, 220, 248],
   ship: [110, 190, 255],
   bullet: [255, 232, 140],
   pad: 24,
   gap: 2,
-  hudY: 16,
   gridTop: 56,
   shipY: 216,
-  watermark: '@h1s97x',
-  starCount: 110,
 };
 
 export interface ClassicLayout {

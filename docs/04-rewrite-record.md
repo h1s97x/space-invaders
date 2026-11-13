@@ -85,7 +85,7 @@ npm test
 | `gh-space-invaders@8d63e8a`（主仓历史） | `src/font.ts` 的 5×7 点阵字形（A–Z / 0–9 / 符号）；`src/render.ts` 的星空、爆炸、飞船与 HUD 绘制思路 |
 | `cnb-space-invaders@5838e41`（归档仓） | `src/game/entities.ts` 的 6×6 外星人点阵与「菱形机身 + 半透明机翼 + 翼尖实色」；`starfield.ts` 的视差星空；`explosion.ts` 的粒子爆炸 |
 
-处理方式：字形表作为纯美术数据沿用；其余全部重画成 8×8 三型两帧，几何、配色、节奏、
+处理方式：字形表作为纯美术数据沿用（2026-11-13 随 HUD 移除而删去，见 ADR 0000 第 17 节）；其余全部重画成 8×8 三型两帧，几何、配色、节奏、
 HUD、清空标记与脏矩形编码均为本项目新写。**未取** `config.ts` / `engine.ts` /
 `constants.ts` / `strategies.ts` 里的常量、坐标系、三种清场策略与节奏——那些带上游设计血缘。
 

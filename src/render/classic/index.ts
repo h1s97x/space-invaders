@@ -1,4 +1,4 @@
-/** classic 渲染器：贡献日历方阵 + 星点 + 极简 HUD，与 invader 并存的第二种输出。 */
+/** classic 渲染器：只剩贡献日历方阵、飞船与子弹，与 invader 并存的第二种输出。 */
 
 import type { Action, Frame, Level, RenderContext } from '../../contract/action.js';
 import type { Renderer } from '../../contract/registry.js';
