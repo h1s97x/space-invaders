@@ -92,12 +92,15 @@ invader [CNB](examples/contrib-cnb.png) · [GitHub](examples/contrib-github.png)
 - uses: h1s97x/space-invaders@v0.1.0
   with:
     source: github
+    user: ${{ github.repository_owner }}
+    token: ${{ github.token }}
     output: game.gif
 ```
 
 完整示例：[examples/pipelines/github-actions.yml](examples/pipelines/github-actions.yml)。
 `action.yml` 是 container action，用 `runs.env` 把 inputs 映射成 `CONTRIB_*`；产物只是一个文件，
-提交与上传由你的工作流负责。
+提交与上传由你的工作流负责。**`runs.env` 不支持 `github` 上下文**，
+所以 `user` / `token` 必须由调用方显式传入（上面的写法）。
 
 ## CNB
 

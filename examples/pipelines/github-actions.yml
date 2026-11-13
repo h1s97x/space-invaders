@@ -16,6 +16,8 @@ jobs:
       - uses: h1s97x/space-invaders@v0.1.0
         with:
           source: github
+          user: ${{ github.repository_owner }}
+          token: ${{ github.token }}
           output: game.gif
       - run: |
           git config user.name 'github-actions[bot]'

@@ -127,6 +127,10 @@
   `.gitignore` 白名单与 README / `todo.md` / ADR 的路径引用同步。
   组织方式参考 `h1s97x/plugins/profile-3d-contrib`（效果图放 `examples/` 根下、
   与 `pipelines/` 并列、和 `docs/` 下的文档分开）。
+- **修复 GitHub container action 加载失败**（端到端实测发现）：`action.yml` 的 `runs.env`
+  曾使用 `github.repository_owner` / `github.token`，而 Docker action 的 `runs.env`
+  不支持 `github` 上下文，workflow 在加载阶段即报错。`user` / `token` 改为调用方显式传入，
+  README 与 `examples/pipelines/github-actions.yml` 同步。
 - **首个发布版本 `0.1.0`**：画面验收通过，`package.json` / README / 示例 `uses:`
   三处版本一致；打 `v0.1.0` tag 后由 `.cnb.yml` 的 `tag_push` 发布插件镜像。
 

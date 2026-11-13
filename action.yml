@@ -13,11 +13,11 @@ inputs:
     required: false
     default: 'github'
   user:
-    description: '目标用户名（留空则用仓库 owner）'
+    description: '目标用户名；GitHub Actions 需由调用方用 github.repository_owner 显式传入'
     required: false
     default: ''
   token:
-    description: '访问令牌（留空则用 github.token）'
+    description: '访问令牌；GitHub Actions 需由调用方用 github.token 显式传入'
     required: false
     default: ''
   endpoint:
@@ -70,8 +70,8 @@ runs:
   image: 'Dockerfile'
   env:
     CONTRIB_SOURCE: ${{ inputs.source }}
-    CONTRIB_USER: ${{ inputs.user || github.repository_owner }}
-    CONTRIB_TOKEN: ${{ inputs.token || github.token }}
+    CONTRIB_USER: ${{ inputs.user }}
+    CONTRIB_TOKEN: ${{ inputs.token }}
     CONTRIB_ENDPOINT: ${{ inputs.endpoint }}
     CONTRIB_CALENDAR: ${{ inputs.calendar }}
     CONTRIB_OUTPUT: ${{ inputs.output }}
