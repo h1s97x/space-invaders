@@ -45,6 +45,40 @@
   视觉命中（同列先打最下方活目标）不变。
 - 四张图重出：CNB 1506 帧 / 1.5MB，GitHub 3491 帧 / 3.5MB（invader）；
   动画中段剩余目标 L/R 从 16/104 改善到 35/75，帧数仍低于 4800 上限。
+- **怪物按列错峰波浪 + 按发随机点射**（[ADR 0000 第 21 节](docs/adr/0000-rewrite-baseline.md)）：
+  怪物恢复两帧动画，按相邻 3 列一组错开相位（18 帧周期），形成扫过的波浪，
+  不再全盘同步切帧；默认 `shuffle` 从「洗牌列顺序」改为「洗牌每一发」，
+  列变化才 `move`，飞船不再清完一整列才走（`spread` / `waves` 保留整列连续发射作对照）。
+  `motion.ts` 新增 `maxTravelFrames`，长距离横移最多 3 帧。
+- 四张图重出：CNB 1864 帧 / 2.6MB，GitHub 4270 帧 / 8.2MB（invader，仍低于 4800 上限）；
+  中段剩余目标 L/R 36/65。体积较上一轮 3.5MB 上涨，是怪物动画的代价，仍低于 16.8MB。
+- **收紧 invader 节奏**（[ADR 0000 第 22 节](docs/adr/0000-rewrite-baseline.md)）：
+  `motion.ts` 单次横移一帧到位、弹道 5 帧 → 3 帧、去掉冷却空转，每发 7 帧 → 3 帧。
+- **classic 按 legacy 比例对齐**（[ADR 0000 第 23 节](docs/adr/0000-rewrite-baseline.md)）：
+  新增 `classicMotion`（长跳 3–4 帧匀速、弹道 5 帧、冷却 1 帧、收尾 5 帧），
+  飞船改画 Galaga 风双翼机身、子弹改 3 段拖尾 + 4 层叠色胶囊、
+  爆炸改小 4 粒 / 2 帧、大 8 粒 / 5 帧；飞船 / 子弹配色对齐 `8d63e8a`。
+  `invader` 不变。第 1 / 6 / 9 节「无上游血缘」约束由用户主动放宽，
+  范围仅限 classic 的节奏数值与美术画法，详见 ADR 第 23 节。
+- 四张图重出：`classic` CNB 1549 帧 / 1.6MB、GitHub 3877 帧 / 4.0MB；
+  `invader` CNB 784 帧 / 1.2MB、GitHub 1750 帧 / 3.6MB。
+  两渲染器节奏分离后帧数不再相同，均低于 4800 上限。
+- **多弹齐飞**（[ADR 0000 第 24 节](docs/adr/0000-rewrite-baseline.md)）：
+  用户指出「前一颗命中前不会再输出子弹」；上一轮误判为射速参数，均衡档作废。
+  `motion.ts` 改为按帧推进的时间线：每帧携带在飞子弹列表与到达帧的命中事件，
+  发射按 2 帧最小间隔注入、不等命中；两个渲染器 `State.bullet` → `bullets[]`，
+  扣血与爆炸只在到达帧发生。保留「到位才开火」，画法与风格零改动。
+- 四张图重出：`invader` CNB 404 帧 / 0.8MB、GitHub 886 帧 / 2.2MB；
+  `classic` CNB 577 帧 / 0.9MB、GitHub 1698 帧 / 2.6MB。
+  帧数与体积较上一轮下降约一半。
+- **飞船恢复多帧匀速滑行**（[ADR 0000 第 25 节](docs/adr/0000-rewrite-baseline.md)）：
+  用户指出飞船仍像瞬移，根因是 `defaultMotion.maxTravelFrames=1`（一帧到位）。
+  调整为 `shipStep 2.5 / maxTravelFrames 8`（invader）、`2 / 10`（classic），
+  长跳 7–9 帧匀速滑行；只改 4 个数字，多弹齐飞 / 到位才开火 / 画法风格不变。
+- 四张图重出：`invader` CNB 760 帧 / 1.4MB、GitHub 2614 帧 / 5.8MB；
+  `classic` CNB 846 帧 / 1.2MB、GitHub 3075 帧 / 4.0MB。
+  **体积代价**：帧数约 1.8–3 倍（`invader` GitHub 2.2MB → 5.8MB），
+  仍低于 16.8MB 历史峰值；两套均低于 4800 上限。
 - **发布冻结**：打 tag 与发布镜像等画面验收通过后再执行；`package.json` 与示例 `uses:`
   的版本号仍未统一（见 `todo.md` P0-1 / P0-2）。
 

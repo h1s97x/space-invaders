@@ -28,7 +28,7 @@
 | 旧 | 新 | 说明 |
 |---|---|---|
 | `-o, --output` | `CONTRIB_OUTPUT` | 默认 `game.gif` |
-| `-s, --strategy` | `CONTRIB_RULE` | 策略概念取消，改为规则注册表（默认 `shuffle` 按 seed 洗牌；`spread` / `waves` 可回退），无一一对应 |
+| `-s, --strategy` | `CONTRIB_RULE` | 策略概念取消，改为规则注册表（默认 `shuffle` 按 seed 洗牌每一发；`spread` / `waves` 可回退），无一一对应 |
 | `--fps` | `CONTRIB_FPS` | 默认 20（旧默认 40，节奏是自研的，不沿用） |
 | `--colors` | — | 调色板由自研 codec 全片共用 256 色 |
 | `--seed` | `CONTRIB_SEED` | 默认 1 |
