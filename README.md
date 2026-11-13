@@ -27,29 +27,29 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 ## 效果图
 
 两种渲染器通过 `CONTRIB_RENDERER` 切换，都能吃任意数据源。下面是真实数据、
-默认参数生成的 **1024×256 完整动画**（不是 10 帧冒烟版）。
+默认参数生成的 **1024×256 完整动画**（不是 10 帧冒烟版；CNB 数据取自 2026-11-13）。
 
 ### `classic` · 贡献绿方块方阵
 
-还原重写前的极简观感：深黑底、星点、四档绿方块、`SCORE` / 署名 HUD、底部蓝色小飞船。
+只留深黑底、四档绿方块、底部蓝色小飞船与子弹；不画星点、分数与署名 HUD。
 
-**CNB 活跃日历** — 98 个目标 / 301 帧
+**CNB 活跃日历** — 99 个目标 / 1506 帧
 
 ![classic CNB](docs/assets/classic-cnb.gif)
 
-**GitHub 贡献日历** — 222 个目标 / 668 帧
+**GitHub 贡献日历** — 222 个目标 / 3491 帧
 
 ![classic GitHub](docs/assets/classic-github.gif)
 
 ### `invader`（默认）· 像素外星人
 
-8×8 三型两帧精灵、深空分层背景、飞船滑行残影与激光轨迹。
+8×8 三型两帧精灵、纯色深底、逐帧飞行的子弹与命中爆炸；不画 HUD、网格、地平线等装饰。
 
-**CNB 活跃日历** — 98 个目标 / 301 帧
+**CNB 活跃日历** — 99 个目标 / 1506 帧
 
 ![invader CNB](docs/assets/contrib-cnb.gif)
 
-**GitHub 贡献日历** — 222 个目标 / 668 帧
+**GitHub 贡献日历** — 222 个目标 / 3491 帧
 
 ![invader GitHub](docs/assets/contrib-github.gif)
 
@@ -73,9 +73,9 @@ invader [CNB](docs/assets/contrib-cnb.png) · [GitHub](docs/assets/contrib-githu
 | `CONTRIB_FPS` | number | `20` | 10..50 | 播放帧率 |
 | `CONTRIB_SCALE` | number | `1` | 1..8 | 整数倍放大（画布已够大，默认不放大） |
 | `CONTRIB_WIDTH` | number | `1024` | 32..2048 | 低分辨率画布宽（放大前，53 列 × 16px 全览） |
-| `CONTRIB_HEIGHT` | number | `256` | 16..1024 | 低分辨率画布高（放大前，含 HUD、地平线与飞船区） |
+| `CONTRIB_HEIGHT` | number | `256` | 16..1024 | 低分辨率画布高（放大前，含顶部留白与飞船区） |
 | `CONTRIB_MAX_FRAMES` | number | `4800` | 1..20000 | 帧数硬上界 |
-| `CONTRIB_RULE` | string | `waves` | string | 规则注册表 id |
+| `CONTRIB_RULE` | string | `shuffle` | string | 规则注册表 id；shuffle＝按 seed 洗牌（默认），spread＝中心扩散，waves＝逐列 |
 | `CONTRIB_RENDERER` | string | `invader` | invader \| classic | 渲染注册表 id；invader＝像素外星人，classic＝贡献绿方块方阵 |
 
 <!--/options-->

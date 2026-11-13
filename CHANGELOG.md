@@ -2,6 +2,52 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased] - 2026-11-13
+
+### ⚠️ 破坏性变更（画面产物）
+
+- **移除所有 HUD 类装饰**：`invader` 的 `SCORE / COMBO / WAVE`、进度条、结束 `CLEAR`；
+  `classic` 的 `SCORE`、署名、星点、结束 `CLEAR`。这些数值由渲染层编造，与贡献数据无关，
+  详见 [ADR 0000 第 17 节](docs/adr/0000-rewrite-baseline.md)。
+- 5×7 点阵字形随之移除；`Theme` 的 `hud` / `hudDim` / `hudHeight` 分别删除或改名为
+  `clearedMark` / `topInset`，`Layout.hudY` 删除；调色板预留色里的 `hud` 换成 `clearedMark`。
+- 渲染产物字节变化：`test/golden/mock.json` 已重生成，四张效果图与四张 PNG 预览已重出。
+
+### 变更
+
+- **运行机制对齐 legacy 的行为模型**（[ADR 0000 第 18 节](docs/adr/0000-rewrite-baseline.md)）：
+  新增 `src/render/motion.ts`，把 Action 展开成
+  `travel（匀速到位）→ launch → flight → impact → cooldown → tail` 逐帧阶段。
+  飞船停稳才开火，子弹是逐帧上移的实体（黄色胶囊 + 3 段递减拖尾），
+  **命中才**扣血并触发大 / 小爆炸；整条瞬发激光移除。
+  `Action` 契约与 `domain/` 一行未改，参数以帧为单位、全部自研，
+  不引入上游速度 / 时间步长 / 节奏常量。
+- 该轮先保留深空分层背景、怪物与飞船建模；`classic` 同步对齐逐帧阶段。
+  背景随后在第 19 节全部移除，此处仅为过程记录。
+- 回归改为验证「不含 HUD / 不含瞬发激光」、阶段顺序（到位 → 发射 → 飞行 → 命中）、
+  子弹胶囊与两渲染器阶段数一致；`npm run check` 33 个测试全绿。
+- 中途出现的体积退化（`invader` GitHub 图曾到 16.8MB）已由第 19 节的装饰清零解决，
+  最终数据见下方。
+- **视觉命中 + 中心扩散 + 装饰清零**（[ADR 0000 第 19 节](docs/adr/0000-rewrite-baseline.md)）：
+  `domain/simulate.ts` 每次 `fire` 动态选同列最下方活目标，子弹不再穿过前排；
+  新增 `spread` 规则并设为默认（`CONTRIB_RULE=waves` 可回退旧逐列行为）。
+  删掉渐变 / 星云 / 扫描线 / 地平线光带与透视线 / 网格框与清空标记 /
+  三层视差星点 / 飞船残影 / 尾焰 / 全盘精灵切帧，改为纯色底 + 静态稀疏星点；
+  保留怪物、飞船、子弹、爆炸四类数据层，`ACCENT_COLORS` 精简为 10 个主题色。
+- **改默认规则属破坏性变更**：`CONTRIB_RULE` 默认从 `waves` 改为 `spread`，
+  `args.ts` / README 参数表 / `docs/02-contract.md` 已同步。
+- 四张图重出：CNB 1416 帧 / 1.4MB，GitHub 3437 帧 / 3.4MB（invader）；
+  脏矩形 99.4% → 0.4% 画布、每帧 5,360 B → 992 B，GitHub 图 16.8MB → 3.4MB。
+- **默认清场顺序改为 seed 洗牌**（[ADR 0000 第 20 节](docs/adr/0000-rewrite-baseline.md)）：
+  用户判定中心扩散效果仍差。`CONTRIB_RULE` 默认从 `spread` 改为 `shuffle`，
+  由 `CONTRIB_SEED` 经自研 xorshift + Fisher-Yates 打乱有目标列的顺序 ——
+  同一 seed 可复现、换 seed 换顺序；`spread` / `waves` 保留可回退。
+  视觉命中（同列先打最下方活目标）不变。
+- 四张图重出：CNB 1506 帧 / 1.5MB，GitHub 3491 帧 / 3.5MB（invader）；
+  动画中段剩余目标 L/R 从 16/104 改善到 35/75，帧数仍低于 4800 上限。
+- **发布冻结**：打 tag 与发布镜像等画面验收通过后再执行；`package.json` 与示例 `uses:`
+  的版本号仍未统一（见 `todo.md` P0-1 / P0-2）。
+
 ## [0.4.0] - 2026-11-12
 
 ### 新增
