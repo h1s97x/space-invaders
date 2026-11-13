@@ -21,13 +21,11 @@
 
 ## 0. 下班前速览
 
-- **【2026-11-13 更新 · 发布冻结】** 用户判定当前画面不合格，**P0-1 / P0-2 暂停**：
-  先删两个渲染器的 HUD 类装饰与假分数（`SCORE / COMBO / WAVE`、进度条、`CLEAR`、
-  classic 的署名与星点），保留深空分层背景、怪物与飞船建模。
-  决策与范围见 `docs/adr/0000-rewrite-baseline.md` 第 17 节。
-  打 tag / 发镜像 / 统一版本号一律等画面验收通过后再做。
-  本轮改动已完成：本地 `npm run check` 33 个测试全绿、四张图重出，
-  **尚未提交 / 推送**，CI 结果待推后确认。
+- **【2026-11-13 第一轮 · 发布冻结（已解除）】** 当时画面不合格，P0-1 / P0-2 暂停，
+  先删 HUD 类装饰与假分数（ADR 0000 第 17 节）。**后续**：画面定稿后冻结已解禁，
+  首个发布 `v0.1.0` 已打 tag、插件镜像已发布、两侧个人主页流水线已正式替换；
+  详见下方第十六轮与 ADR 第 31 节。本条及以下各轮的「未提交 / 未推送」
+  均为当时快照，**最终状态以本节末尾与第 4 节为准**。
 - **【2026-11-13 第二轮 · 运行机制对齐】** 用户进一步判定飞船运行逻辑、子弹与射击特效
   仍不合格，要求至少对齐 legacy。按 `docs/adr/0000-rewrite-baseline.md` 第 18 节：
   行为对齐、参数自研，`Action` 契约与 `domain/` 不动，由渲染层逐帧插值；
@@ -366,9 +364,10 @@ GitHub 旁路测试 workflow 用 `source: github` + `github.token` 在真实 Act
 
 ### P2-1 · 坐标与文档复核
 
-- 本地 `git remote` 仍是旧 slug，靠 301；新环境一律用 `space-invaders.git`。
-- `plugin-meta.json` 的 `images` 指向 `/-/packages`，但制品库尚无镜像（随 P0-1 解决）。
-- `examples/pipelines/cnb.yml` 的镜像坐标在 P0-1 前不可用。
+- 本地 `git remote` 已是 `h1s97x/plugins/space-invaders.git`（正确 slug），无需依赖 301。
+- `plugin-meta.json` 的 `images` 指向 `/-/packages`；`v0.1.0` tag_push 已成功发布镜像，
+  可顺手确认制品库页面展示（功能已验证：CNB profile 流水线成功拉取 `:v0.1.0`）。
+- `examples/pipelines/cnb.yml` 的镜像坐标已可用（`:latest` / `:v0.1.0`）。
 - `README` 里 `npm run check` 标注 33 个测试；新增测试后记得同步该数字。
 - `SECURITY.md` 的私密漏洞链接指向 `h1s97x/space-invaders`（已改），可顺手确认。
 
