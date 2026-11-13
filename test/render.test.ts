@@ -114,7 +114,7 @@ test('飞船建模与子弹仍在，零数据装饰的绘制函数已移除', ()
   }
 });
 
-test('静态深空底图：有限色带渐变、分档星点、1px 基准线，旧装饰不回归', () => {
+test('静态深空底图：只有有限色带渐变，无星点 / 基准线 / 旧装饰', () => {
   const backdrop = createBackdrop(ctx, defaultTheme);
   const again = createBackdrop(ctx, defaultTheme);
   assert.deepEqual([...backdrop.subarray(0, 4096)], [...again.subarray(0, 4096)], '静态底图可复现');
@@ -126,22 +126,8 @@ test('静态深空底图：有限色带渐变、分档星点、1px 基准线，�
   const top = at(3, 1);
   const bottom = at(3, ctx.height - 2);
   assert.ok(bottom[2]! > top[2]!, '应有自上而下略微提亮的深渐变');
-  assert.ok(distinctColors(backdrop) < 20,
-    '渐变必须量化成有限色带、星点必须分档，不能产生数百色阶');
-
-  // 基准线：整行恰好 1px、静态常量色，不是光带
-  const rows: number[] = [];
-  for (let y = 0; y < ctx.height; y += 1) {
-    let hits = 0;
-    for (let x = 0; x < ctx.width; x += 16) {
-      const [r, g, b] = at(x, y);
-      if (r === defaultTheme.baseline[0] &&
-          g === defaultTheme.baseline[1] &&
-          b === defaultTheme.baseline[2]) hits += 1;
-    }
-    if (hits > 32) rows.push(y);
-  }
-  assert.deepEqual(rows, [defaultTheme.baselineY], '基准线应只有 1px、静态、无光带');
+  assert.ok(distinctColors(backdrop) <= defaultTheme.bandCount,
+    '底图只应有 8 个渐变色带，没有星点或基准线的额外色阶');
 
   assert.equal('drawHorizon' in backdropModule, false);
   assert.equal('createStars' in backdropModule, false);
