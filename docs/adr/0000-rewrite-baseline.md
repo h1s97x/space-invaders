@@ -1155,4 +1155,27 @@ travel 约 7,700 帧，加每发弹道 + 冷却约 5,700 帧，合计 ~13,400 �
 6. 用户提供的 GitHub PAT 仅用于 `sync-github.sh` 与 clone，不写入任何仓库文件，
    存于权限 600 的临时文件，用完删除并提醒平台侧吊销。
 
-**验收**：实施后补。
+**验收（2026-11-13 完成）**：
+
+- 首个发布版本 `v0.1.0` 已打 tag 并推 CNB 主仓；`sync-github.sh` 同步 `main` / `latest` / tag
+  到 GitHub 分发端点，两侧 `git ls-remote --tags` 一致（`554d9f3`）。
+  tag_push 流水线 `cnb-uu3-1k7a11s1p` success（210s），`:v0.1.0` / `:latest` 镜像已发布。
+- **端到端实测发现并修复一个真实缺陷**：GitHub 首次 run `43395709730` 失败，
+  日志显示 `action.yml` 的 `runs.env` 用了 `github.repository_owner` / `github.token`，
+  Docker container action 不支持 `github` 上下文。改为调用方显式传 `user` / `token`，
+  README 与 `examples/pipelines/github-actions.yml` 同步，`v0.1.0` tag 强制更新到修复提交。
+- 修复后两侧旁路测试均成功：
+  - GitHub `h1s97x/h1s97x`：新增 `.github/workflows/space-invaders-test.yml`
+    （只开 `workflow_dispatch`），run `43396330166` success；产物 `game-v2.gif`
+    = 1024×256 / 3081 帧 / 50ms / 6.90MB，`GIF89a`、中段 65 色。
+  - CNB `h1s97x/h1s97x`：新增 `api_trigger` 自包含流水线（插件 + commit 同条 stages），
+    build `cnb-4j8-1k7a1jk07` success；产物 `game-v2.gif`
+    = 1024×256 / 849 帧 / 50ms / 1.54MB，`GIF89a`、中段 85 色。
+  - 线上 `game.gif` 与 `cnb-metrics.svg` / `snake.svg` / `profile-3d-contrib/*.svg` 均未受影响。
+- CNB 取数匿名 401 / 带 token 200，`settings.token: ${CNB_TOKEN}` 实测生效；
+  `entrypoint.sh` 的零平台内核未改。
+- **未做（需用户确认）**：阶段 2 把两个 profile 仓库的旧插件正式替换成新插件
+  （产物从 `game-v2.gif` 改回 `game.gif`）；目前线上仍由旧插件更新。
+- 用户提供的 GitHub PAT 存于权限 600 的临时文件、用完删除，未写入任何仓库文件；
+  **需立即在 GitHub 平台侧吊销**。
+- 发布冻结已解禁；主仓改动按批次提交并推送。

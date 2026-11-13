@@ -138,7 +138,19 @@
   从 `docs/assets/` 迁到根目录 `examples/`（参考 `profile-3d-contrib` 的组织：
   效果图直接放 `examples/` 根下、与 `pipelines/` 并列、配 `examples/README.md` 索引，
   与 `docs/` 下的文档分开）。`.gitignore` 白名单、README / todo / ADR 路径引用已同步；
-  `.dockerignore` 本就排除 `examples/`。发布继续冻结。
+  `.dockerignore` 本就排除 `examples/`。
+
+- **【2026-11-13 第十六轮 · 首个发布与两侧端到端】** 用户指出「连第一个版本都还没有」，
+  首个发布定为 `v0.1.0`（不跳 0.4.0）：`CHANGELOG` 纸面版本改为开发期里程碑，
+  `package.json` / README / 示例三处本就是 0.1.0。打 tag 并同步分发端点，
+  tag_push 流水线成功发布 `:v0.1.0` / `:latest` 镜像。
+  用 PAT 与平台 CNB_TOKEN clone 两个个人主页仓库 `h1s97x/h1s97x`，
+  各写一条旁路测试流水线（产物 `game-v2.gif`）：GitHub `workflow_dispatch`、
+  CNB `api_trigger` 自包含；两侧均 success、GIF 可解码，线上 `game.gif` 未动。
+  **实测修复**：`action.yml` 的 `runs.env` 不支持 `github` 上下文，
+  改由调用方显式传 `user` / `token`；`v0.1.0` tag 已强制更新到修复提交。
+  阶段 2（正式替换旧插件）待用户确认。PAT 临时文件已删，**需平台侧吊销**。
+  发布冻结已解禁；主仓改动按批次提交并推送。
 - **全部成果已在 CNB 主仓**：`main`（交接时 `d546791`；之后每次文档提交都会前进，
   新环境一律以 `git log -1` 为准），工作区干净，33 个测试全绿，
   `docs:check` 通过，CNB CI `cnb-l4g-1k77k619n` success。
@@ -301,25 +313,25 @@ GitHub Actions `CI` 在 `206c9d3` 上 `completed / success`。
 子弹不再穿过前排打后面的怪物。回归已锁住列序与命中顺序，黄金帧与四张图已重出。
 残留的数据分布问题另见 P1-5。
 
-### P1-2 · 平台内真数据端到端未跑
+### P1-2 · 平台内真数据端到端 —— 已完成（2026-11-13，ADR 0000 第 31 节）
 
-**背景**：CNB CI 与 GitHub Actions CI 都只跑 `npm run check` + `mock` 10 帧冒烟；
-真数据 `source=cnb` / `source=github` 的完整动画只在**本机**生成过。
-分发端点已同步到新代码，但**无任何 tag**，`uses:@v0.x` 仍不可解析，
-container action 在真实工作流里**从未运行过**。
-**动作**：P0-1/P0-2 完成后，在示例仓库各跑一次真实流水线
-（GitHub `uses:@v0.1.0`、CNB `examples/pipelines/cnb.yml`），确认容器入口、
-`runs.env` / `PLUGIN_*` 前缀归一、产物落盘与提交都正常。
-**验收**：两侧各一次真数据端到端，产物 GIF 可解码。
+**已完成**：首个发布 `v0.1.0` 打 tag 并同步分发端点后，在两个个人主页仓库各接通一条
+旁路测试流水线（产物 `game-v2.gif`，线上 `game.gif` 仍由旧插件更新）：
+- GitHub `h1s97x/h1s97x`：`.github/workflows/space-invaders-test.yml`，
+  run `43396330166` success，1024×256 / 3081 帧 / 6.90MB，`GIF89a` 可解码。
+- CNB `h1s97x/h1s97x`：`api_trigger` 自包含流水线，build `cnb-4j8-1k7a1jk07` success，
+  1024×256 / 849 帧 / 1.54MB，`GIF89a` 可解码。
+- 实测发现并修复 `action.yml` 的 `runs.env` 不支持 `github` 上下文（详见 ADR 第 31 节）。
 
-### P1-3 · `source=github` 的完整图不是 GraphQL 真数据
+**仍待用户确认**：阶段 2 把旧插件正式替换掉，产物名改回 `game.gif`；
+本轮按「我需要测试」的口径只做旁路，不擅自改线上展示。
 
-**背景**：当前 `examples/contrib-github.gif` 与 `classic-github.gif` 用的是
-GitHub 公开贡献页（无需 PAT）解析出的 369 天 / 9,420 次贡献，归一成
-`calendar.json` 后走 `file` 源生成；`source=github` 的 GraphQL 路径只在有 PAT 时
-跑过 10 帧冒烟（221 个目标，与公开页的 222 差 1 天，是滚动窗口边界）。
-**动作**：拿到新 PAT 后用 `CONTRIB_SOURCE=github` 重出一次完整图，与现有图对比。
-**验收**：两条路径的 `Calendar` 在相同窗口内一致；差异只能是窗口边界。
+### P1-3 · `source=github` 的完整图 —— 已完成（2026-11-13，ADR 0000 第 31 节）
+
+GitHub 旁路测试 workflow 用 `source: github` + `github.token` 在真实 Actions 里跑通，
+产物 `game-v2.gif` 为 1024×256 / 3081 帧 / 6.90MB；与本机 `file` 源生成的
+`examples/contrib-github.gif`（同尺寸、同帧数、同体积）一致，
+差异只剩公开贡献页与 GraphQL 的滚动窗口边界。GraphQL 完整路径已验证。
 
 ### P1-4 · 背景与零数据装饰 —— 已完成（2026-11-13，ADR 0000 第 19 节）
 
