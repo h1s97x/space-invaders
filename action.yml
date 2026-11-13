@@ -49,7 +49,7 @@ inputs:
     required: false
     default: '1024'
   height:
-    description: '低分辨率画布高（放大前，含 HUD、地平线与飞船区）'
+    description: '低分辨率画布高（放大前，含顶部留白与飞船区）'
     required: false
     default: '256'
   max_frames:
@@ -57,9 +57,9 @@ inputs:
     required: false
     default: '4800'
   rule:
-    description: '规则注册表 id'
+    description: '规则注册表 id；shuffle＝按 seed 洗牌（默认），spread＝中心扩散，waves＝逐列'
     required: false
-    default: 'waves'
+    default: 'shuffle'
   renderer:
     description: '渲染注册表 id：invader（像素外星人）| classic（贡献绿方块方阵）'
     required: false
