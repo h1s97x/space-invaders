@@ -38,11 +38,11 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 
 **CNB 活跃日历** — 99 个目标 / 849 帧
 
-![classic CNB](docs/assets/classic-cnb.gif)
+![classic CNB](examples/classic-cnb.gif)
 
 **GitHub 贡献日历** — 221 个目标 / 3081 帧
 
-![classic GitHub](docs/assets/classic-github.gif)
+![classic GitHub](examples/classic-github.gif)
 
 ### `invader`（默认）· 像素外星人
 
@@ -51,15 +51,15 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 
 **CNB 活跃日历** — 99 个目标 / 849 帧
 
-![invader CNB](docs/assets/contrib-cnb.gif)
+![invader CNB](examples/contrib-cnb.gif)
 
 **GitHub 贡献日历** — 221 个目标 / 3081 帧
 
-![invader GitHub](docs/assets/contrib-github.gif)
+![invader GitHub](examples/contrib-github.gif)
 
-静态预览：classic [CNB](docs/assets/classic-cnb.png) · [GitHub](docs/assets/classic-github.png)；
-invader [CNB](docs/assets/contrib-cnb.png) · [GitHub](docs/assets/contrib-github.png)。
-四张 GIF 为文档展示资产，不参与构建与镜像分发。
+静态预览：classic [CNB](examples/classic-cnb.png) · [GitHub](examples/classic-github.png)；
+invader [CNB](examples/contrib-cnb.png) · [GitHub](examples/contrib-github.png)。
+四张 GIF 是示例展示资产，不参与构建与镜像分发；索引见 `examples/README.md`。
 
 ## 参数（由 `src/cli/args.ts` 自动生成，勿手改）
 

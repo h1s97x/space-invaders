@@ -141,7 +141,7 @@ space-invaders/
 │
 ├── scripts/
 │   ├── docs.ts                     # args.ts → README 参数表；--check 供 CI
-│   ├── demo.ts                     # mock → docs/assets/demo.gif
+│   ├── demo.ts                     # mock → examples/demo.gif
 │   └── golden.ts                   # 重生成黄金帧摘要
 ├── test/
 │   ├── contract.test.ts            # 归一化边界：稀疏、跨年、未来日期
@@ -368,7 +368,7 @@ space-invaders/
 
 ## 13. 效果图与长窗口修复（2026-11-12）
 
-- 为回答「效果图在哪」，两张完整图作为**文档资产**入库 `docs/assets/`：
+- 为回答「效果图在哪」，两张完整图作为**文档资产**入库 `examples/`：
   `contrib-cnb.gif`（98 目标 / 394 帧 / 480×160）、
   `contrib-github.gif`（222 目标 / 885 帧 / 480×160），另附两张 PNG 静态预览。
   `.gitignore` 只对这四个文件开口子，`dist/` 与临时 GIF 仍不入库。
@@ -596,7 +596,7 @@ classic 首帧经 Pillow 解码目视确认绿方阵观感成立。
 **用户反馈**：子弹会穿过前排打后面的怪物；逐列从左到右清场太无趣；
 左侧空网格 / 十字标记与底部地平线光带「这都是干什么的」。用户确认按整套方案执行。
 
-**实测依据**（改动前的 `docs/assets/contrib-github.gif`，3137 帧）：
+**实测依据**（改动前的 `examples/contrib-github.gif`，3137 帧）：
 
 - 每帧 5,360 B → 16.8MB；`classic` 同帧数仅 912 B/帧 → 2.9MB。
 - 每帧实际变化 4,217 px（画布 1.6%），但脏矩形平均 260,477 px = **99.4% 画布**：

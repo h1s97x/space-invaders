@@ -134,6 +134,11 @@
   `classic` 纯渐变 `(10,13,20)→(19,25,38)` 无基准线，区分成立；
   四张图顶部 20 行跨 30 帧不变（全静态）。`invader` 体积因节奏对齐上涨约 18%。
   已按批次提交并推送。
+- **【2026-11-13 第十五轮 · 示例资产迁移】** 画面定稿。按用户要求把 8 个效果图
+  从 `docs/assets/` 迁到根目录 `examples/`（参考 `profile-3d-contrib` 的组织：
+  效果图直接放 `examples/` 根下、与 `pipelines/` 并列、配 `examples/README.md` 索引，
+  与 `docs/` 下的文档分开）。`.gitignore` 白名单、README / todo / ADR 路径引用已同步；
+  `.dockerignore` 本就排除 `examples/`。发布继续冻结。
 - **全部成果已在 CNB 主仓**：`main`（交接时 `d546791`；之后每次文档提交都会前进，
   新环境一律以 `git log -1` 为准），工作区干净，33 个测试全绿，
   `docs:check` 通过，CNB CI `cnb-l4g-1k77k619n` success。
@@ -214,7 +219,7 @@ GIT_CONFIG_VALUE_0='!cnb git-credential' git push origin HEAD:main
 - 自研 codec：手写光栅、调色板量化（含 `reserve` 预留色）、GIF89a + LZW、
   脏矩形差分 + 处置方式 1（保留上一帧）。
 - `args.ts` 单点声明 → `docs:check` 拒绝文档漂移；黄金帧摘要锁定 10 帧 mock 产物。
-- 四张 `1024×256` 真数据效果图（两渲染器 × 两平台）+ 四张 PNG 预览已入库 `docs/assets/`
+- 四张 `1024×256` 真数据效果图（两渲染器 × 两平台）+ 四张 PNG 预览已入库 `examples/`
   （2026-11-13 用新渲染器重出，见 ADR 0000 第 17 节）。
 - 两个渲染器的 HUD 类装饰与假分数已全部移除，深空分层背景、怪物 / 飞船建模保留。
 - 双平台契约：`action.yml`（container action）、`plugin-meta.json`、`entrypoint.sh`
@@ -306,7 +311,7 @@ container action 在真实工作流里**从未运行过**。
 
 ### P1-3 · `source=github` 的完整图不是 GraphQL 真数据
 
-**背景**：当前 `docs/assets/contrib-github.gif` 与 `classic-github.gif` 用的是
+**背景**：当前 `examples/contrib-github.gif` 与 `classic-github.gif` 用的是
 GitHub 公开贡献页（无需 PAT）解析出的 369 天 / 9,420 次贡献，归一成
 `calendar.json` 后走 `file` 源生成；`source=github` 的 GraphQL 路径只在有 PAT 时
 跑过 10 帧冒烟（221 个目标，与公开页的 222 差 1 天，是滚动窗口边界）。
@@ -373,7 +378,7 @@ curl -sS -o /tmp/gh-contrib.svg https://github.com/users/h1s97x/contributions
 # 生成 { from, to, total: 0, days: [{ date: "YYYYMMDD", metrics: { commits: N, ... } }] }
 # 窗口 from/to 用所有日期键的 min/max（不要用 dates[0]/dates[-1]，多年度区块不是有序的）
 CONTRIB_SOURCE=file CONTRIB_CALENDAR=/tmp/gh-calendar.json \
-  CONTRIB_OUTPUT=docs/assets/contrib-github.gif node dist/src/cli/index.js
+  CONTRIB_OUTPUT=examples/contrib-github.gif node dist/src/cli/index.js
 ```
 
 **四张效果图的生成命令**（临时预览脚本已删，需要时按上述格式重建）
@@ -382,10 +387,10 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=/tmp/gh-calendar.json \
 # invader（默认）
 CONTRIB_SOURCE=cnb CONTRIB_USER=h1s97x CONTRIB_TOKEN="$CNB_TOKEN" \
   CONTRIB_ENDPOINT="${CNB_API_ENDPOINT:-https://api.cnb.cool}" \
-  CONTRIB_OUTPUT=docs/assets/contrib-cnb.gif node dist/src/cli/index.js
+  CONTRIB_OUTPUT=examples/contrib-cnb.gif node dist/src/cli/index.js
 # classic
 CONTRIB_RENDERER=classic CONTRIB_SOURCE=file CONTRIB_CALENDAR=/tmp/gh-calendar.json \
-  CONTRIB_OUTPUT=docs/assets/classic-github.gif node dist/src/cli/index.js
+  CONTRIB_OUTPUT=examples/classic-github.gif node dist/src/cli/index.js
 # 预览：Pillow 打开 GIF、seek 到首帧或中段帧、convert('RGBA').save(...png)
 ```
 

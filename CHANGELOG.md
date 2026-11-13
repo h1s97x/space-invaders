@@ -118,6 +118,11 @@
 - 四张图重出：两系列帧数已一致（CNB 849、GitHub 3081），
   `invader` CNB 1.54MB / GitHub 6.90MB，`classic` CNB 1.22MB / GitHub 4.08MB。
   节奏对齐让 `invader` 帧数与体积上涨（GitHub 5.86MB → 6.90MB）。
+- **示例资产迁到根目录 `examples/`**：8 张效果图从 `docs/assets/` 用 `git mv`
+  迁到 `examples/`（保留历史），新增 `examples/README.md` 索引；
+  `.gitignore` 白名单与 README / `todo.md` / ADR 的路径引用同步。
+  组织方式参考 `h1s97x/plugins/profile-3d-contrib`（效果图放 `examples/` 根下、
+  与 `pipelines/` 并列、和 `docs/` 下的文档分开）。
 - **发布冻结**：打 tag 与发布镜像等画面验收通过后再执行；`package.json` 与示例 `uses:`
   的版本号仍未统一（见 `todo.md` P0-1 / P0-2）。
 
