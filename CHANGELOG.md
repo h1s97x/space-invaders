@@ -79,6 +79,21 @@
   `classic` CNB 846 帧 / 1.2MB、GitHub 3075 帧 / 4.0MB。
   **体积代价**：帧数约 1.8–3 倍（`invader` GitHub 2.2MB → 5.8MB），
   仍低于 16.8MB 历史峰值；两套均低于 4800 上限。
+- **invader 背景改为克制的静态深空**（[ADR 0000 第 26 节](docs/adr/0000-rewrite-baseline.md)）：
+  用户选定 B 方案。8 色带极淡深渐变 `[9,13,22] → [18,26,42]`、
+  140 颗 4 档灰度静态星点、1px 静态基准线；全部只在 `createBackdrop()` 算一次，
+  零差分、零逐帧开销。星云、扫描线、网格框、地平线光带与滚动透视线仍未加回；
+  `classic` 不动。
+- 四张图统一用 2026-11-13 数据重出（GitHub 公开贡献页今日 221 个活跃日）：
+  `invader` CNB 760 帧 / 1.4MB、GitHub 2619 帧 / 6.1MB；
+  `classic` CNB 846 帧 / 1.2MB、GitHub 3081 帧 / 4.0MB。
+  脏矩形涨幅≈0、首帧用色 97 / 92 → 62 / 64；体积 `invader` +4–6%。
+- **classic 方块随命中退化**（[ADR 0000 第 27 节](docs/adr/0000-rewrite-baseline.md)）：
+  用户发现 `invader` 每次命中怪物降级，而 `classic` 颜色恒按热度、只在清空时变暗。
+  改为「热度决定起始档位 + 每次命中严格降一档」，`byCell` 记录 `tier`、
+  `theme.ts` 导出 `levelIndexOfHeat()`；四档绿都能出现，不丢「哪天贡献多」的信息。
+- 两张 `classic` 效果图重出（CNB 846 帧 / 1.19MB、GitHub 3081 帧 / 4.03MB），
+  体积与脏矩形几乎不变；`invader` 未改。
 - **发布冻结**：打 tag 与发布镜像等画面验收通过后再执行；`package.json` 与示例 `uses:`
   的版本号仍未统一（见 `todo.md` P0-1 / P0-2）。
 

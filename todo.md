@@ -10,6 +10,12 @@
 > 决策基线：`docs/adr/0000-rewrite-baseline.md`（第 1~9 节决策与验收清单、第 10 节计划、
 > 第 11~16 节实施记录）。迁移归档：`docs/05-migration.md`。归属核验：`docs/04-rewrite-record.md`。
 > 契约：`docs/02-contract.md`。扩展指南：`docs/03-extending.md`。
+>
+> **工作方式（2026-11-13 用户要求）**：每轮改动做完即按主题分批 `git commit`
+> 并推送 CNB 主仓 `main`，**不等用户提醒、不每轮追问是否提交**。
+> 分批惯例：① 玩法内核 / 渲染层代码 ② 测试与黄金帧 ③ 决策文档
+> ④ 展示资产。提交用 `--no-gpg-sign` 与 `h1s97x <1297656998@outlook.com`。
+> 例外：打 tag / 发镜像 / 解禁发布冻结仍需单独确认。
 
 ---
 
@@ -78,7 +84,25 @@
   验收：33 个测试全绿、四张图重出（`invader` CNB 760 / GitHub 2614 帧 / 5.8MB，
   `classic` CNB 846 / GitHub 3075 帧 / 4.0MB，两套均低于 4800 上限）；
   滑行段中位 5–6 帧、最长 8–10 帧，Pillow 逐帧追踪前 40 帧有 28–35 帧连续位移，
-  确认不是瞬移；439 发全部结算。改动未提交 / 未推送。
+  确认不是瞬移；439 发全部结算。
+  **第 5–9 轮改动已按 5 笔提交（`a76d57f` … `dd4c528`），仍未推送。**
+- **【2026-11-13 第十轮 · 静态深空背景】** 用户判定画面已定稿、只缺背景，
+  在 A/B/C 三方向中选定 **B**。按 `docs/adr/0000-rewrite-baseline.md` 第 26 节：
+  `invader` 底图改为 8 色带极淡深渐变 + 140 颗 4 档灰度静态星点 +
+  1px 静态基准线，全部只算一次、零差分；`classic` 不动。
+  发布继续冻结。
+  验收：33 个测试全绿、四张图统一用当日数据重出（GitHub 公开贡献页今日 221 个活跃日，
+  上一轮 222，属窗口边界变化）；`invader` CNB 760 / GitHub 2619 帧，
+  `classic` CNB 846 / GitHub 3081 帧。脏矩形涨幅≈0（8.9% / 23.0%）、
+  首帧用色 97/92 → 62/64、基准线 1px 且无绘制区跨 30 帧完全不变；
+  `invader` 体积 +4–6%。本轮改动未提交 / 未推送。
+- **【2026-11-13 第十一轮 · classic 命中退化】** 用户发现 `invader` 每次命中怪物降级，
+  `classic` 却没有（颜色恒按热度，只在清空时变暗）。按 `docs/adr/0000-rewrite-baseline.md`
+  第 27 节：保留热度起点、每次命中严格降一档绿，四档都能出现。
+  发布继续冻结。
+  验收：33 个测试全绿（新增单方块出现 ≥2 档绿的回归）、两张 `classic` 图重出
+  （CNB 846 帧 / 1.19MB、GitHub 3081 帧 / 4.03MB）；四档绿抽样均在 149–210/206 帧出现，
+  体积与脏矩形几乎不变；`invader` 产物未动。改动未提交 / 未推送。
 - **全部成果已在 CNB 主仓**：`main`（交接时 `d546791`；之后每次文档提交都会前进，
   新环境一律以 `git log -1` 为准），工作区干净，33 个测试全绿，
   `docs:check` 通过，CNB CI `cnb-l4g-1k77k619n` success。
@@ -335,8 +359,8 @@ CONTRIB_RENDERER=classic CONTRIB_SOURCE=file CONTRIB_CALENDAR=/tmp/gh-calendar.j
 ```
 
 默认画布 `1024×256`、`scale=1`；`CONTRIB_RENDERER=invader|classic`；
-真数据 CNB 99 目标 / GitHub 222 目标（2026-11-13 抓取）。
-匀速滑行后帧数：`classic` CNB 846 / GitHub 3075，`invader` CNB 760 / GitHub 2614。
+真数据 CNB 99 目标 / GitHub 221 目标（2026-11-13 抓取）。
+静态深空背景后帧数：`classic` CNB 846 / GitHub 3081，`invader` CNB 760 / GitHub 2619。
 
 **验证 GIF 正确性的固定做法**（避免再次出现「渲染好看但 GIF 全黑」）
 

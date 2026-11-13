@@ -33,27 +33,27 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 
 ### `classic` · 贡献绿方块方阵（legacy 比例节奏）
 
-只留深黑底、四档绿方块、Galaga 风小飞船、黄色胶囊子弹与命中爆炸；
-不画星点、分数与署名 HUD。
+只留深黑底、四档绿方块（每次命中退化一档）、Galaga 风小飞船、
+黄色胶囊子弹与命中爆炸；不画星点、分数与署名 HUD。
 
 **CNB 活跃日历** — 99 个目标 / 846 帧
 
 ![classic CNB](docs/assets/classic-cnb.gif)
 
-**GitHub 贡献日历** — 222 个目标 / 3075 帧
+**GitHub 贡献日历** — 221 个目标 / 3081 帧
 
 ![classic GitHub](docs/assets/classic-github.gif)
 
 ### `invader`（默认）· 像素外星人
 
-8×8 三型两帧精灵按列错峰波浪、纯色深底、逐帧飞行的子弹与命中爆炸；
-不画 HUD、网格、地平线等装饰。
+8×8 三型两帧精灵按列错峰波浪、极淡深空渐变与静态星点、逐帧飞行的子弹与命中爆炸；
+不画 HUD、网格、光带与滚动线等装饰。
 
 **CNB 活跃日历** — 99 个目标 / 760 帧
 
 ![invader CNB](docs/assets/contrib-cnb.gif)
 
-**GitHub 贡献日历** — 222 个目标 / 2614 帧
+**GitHub 贡献日历** — 221 个目标 / 2619 帧
 
 ![invader GitHub](docs/assets/contrib-github.gif)
 
