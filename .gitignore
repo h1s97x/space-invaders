@@ -10,7 +10,7 @@ dist/
 .tmp-compare/
 .tmp-credentials
 .tmp-preview.mjs
-!docs/assets/contrib-cnb.gif
-!docs/assets/contrib-github.gif
-!docs/assets/classic-cnb.gif
-!docs/assets/classic-github.gif
+!examples/contrib-cnb.gif
+!examples/contrib-github.gif
+!examples/classic-cnb.gif
+!examples/classic-github.gif
