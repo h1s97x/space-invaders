@@ -4,14 +4,15 @@
  * 与 invader 共享同一份 `Level` / `Action[]` 契约和 `render/motion.ts` 的逐帧时间线，
  * 但用独立的 `classicMotion` 节奏（按自有旧仓 `8d63e8a` 的速度比例换算，
  * 见 ADR 0000 第 23 节）。飞船、子弹、爆炸画法也按该旧仓重画。
- * 允许多弹齐飞，命中只在子弹到达帧结算（第 24 节）。
+ * 允许多弹齐飞，命中只在子弹到达帧结算（第 24 节）；
+ * 方块每次命中退化一档绿、热度决定初始档位（第 27 节）。
  * 只留深黑底、四档绿方块、飞船、子弹与命中爆炸，不画星点 / HUD。
  */
 
 import { createSurface } from '../codec/raster.js';
 import type { Action, Frame, Level, RenderContext } from '../../contract/action.js';
 import { classicMotion, expand, type BulletFlight, type Phase } from '../motion.js';
-import { classicLayout, classicTheme, levelOfHeat, type ClassicTheme } from './theme.js';
+import { classicLayout, classicTheme, levelIndexOfHeat, type ClassicTheme } from './theme.js';
 
 interface Burst {
   x: number;
@@ -25,7 +26,7 @@ interface Burst {
 
 interface State {
   remaining: Map<string, number>;
-  byCell: Map<string, { key: string; heat: number }>;
+  byCell: Map<string, { key: string; heat: number; tier: number }>;
   shipX: number;
   bullets: readonly BulletFlight[];
   bursts: Burst[];
@@ -153,9 +154,17 @@ function paint(
       const cell = state.byCell.get(`${column}:${row}`);
       let color = theme.empty;
       if (cell) {
-        color = (state.remaining.get(cell.key) ?? 0) > 0
-          ? levelOfHeat(cell.heat, theme)
-          : theme.cleared;
+        const left = state.remaining.get(cell.key) ?? 0;
+        if (left <= 0) {
+          color = theme.cleared;
+        } else {
+          // 每次命中退化一档：base 至少为 tier-1，保证 remaining 从 tier 降到 1
+          // 的过程中每次都严格降档，不会因热度低而卡在暗档不动。
+          const base = Math.max(levelIndexOfHeat(cell.heat, theme), cell.tier - 1);
+          const hits = cell.tier - left;
+          const index = Math.max(0, Math.min(theme.levels.length - 1, base - hits));
+          color = theme.levels[index]!;
+        }
       }
       surface.rect(x, y, x + layout.cell, y + layout.cell, color);
     }
@@ -202,7 +211,11 @@ export function* animate(
   for (const wave of level.waves) {
     for (const target of wave.targets) {
       state.remaining.set(target.key, target.tier);
-      state.byCell.set(`${target.column}:${target.row}`, { key: target.key, heat: target.heat });
+      state.byCell.set(`${target.column}:${target.row}`, {
+        key: target.key,
+        heat: target.heat,
+        tier: target.tier,
+      });
       targets.set(target.key, { column: target.column, row: target.row });
     }
   }

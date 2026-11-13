@@ -73,12 +73,17 @@ export function classicLayout(
   };
 }
 
-/** 活跃度 → 四档绿，与 invader 的 tier 分档无关。 */
-export function levelOfHeat(heat: number, theme: ClassicTheme): RGB {
+/** 活跃度 → 四档绿的索引；命中退化在 animate.ts 里从该索引往下扣。 */
+export function levelIndexOfHeat(heat: number, theme: ClassicTheme): number {
   // 贡献值是长尾分布，线性分档会让大半画面落在最暗一档；sqrt 提亮中低活跃度
   const index = Math.min(
     theme.levels.length - 1,
     Math.floor(Math.sqrt(heat) * theme.levels.length),
   );
-  return theme.levels[Math.max(0, index)]!;
+  return Math.max(0, index);
+}
+
+/** 活跃度 → 四档绿，供需要直接取色的地方使用。 */
+export function levelOfHeat(heat: number, theme: ClassicTheme): RGB {
+  return theme.levels[levelIndexOfHeat(heat, theme)]!;
 }
