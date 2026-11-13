@@ -10,7 +10,12 @@ import type { RGB } from '../codec/types.js';
 import type { RenderContext } from '../../contract/action.js';
 
 export interface ClassicTheme {
+  /** 深渐变的上沿色 */
   background: RGB;
+  /** 深渐变的下沿色（明度差比 invader 更收，不抢绿方块） */
+  bgBottom: RGB;
+  /** 渐变量化色带数 */
+  bandCount: number;
   /** 无贡献的空格 */
   empty: RGB;
   /** 已被清掉的格子 */
@@ -27,6 +32,8 @@ export interface ClassicTheme {
 
 export const classicTheme: Readonly<ClassicTheme> = {
   background: [10, 13, 20],
+  bgBottom: [19, 25, 38],
+  bandCount: 8,
   empty: [18, 24, 32],
   cleared: [13, 18, 25],
   levels: [

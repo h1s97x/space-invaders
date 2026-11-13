@@ -5,14 +5,16 @@
  * 但用独立的 `classicMotion` 节奏（按自有旧仓 `8d63e8a` 的速度比例换算，
  * 见 ADR 0000 第 23 节）。飞船、子弹、爆炸画法也按该旧仓重画。
  * 允许多弹齐飞，命中只在子弹到达帧结算（第 24 节）；
- * 方块每次命中退化一档绿、热度决定初始档位（第 27 节）。
- * 只留深黑底、四档绿方块、飞船、子弹与命中爆炸，不画星点 / HUD。
+ * 方块每次命中退化一档绿、热度决定初始档位（第 27 节）；
+ * 静态渐变底图只算一次、每帧复用（第 28 节）。
+ * 只留四档绿方块、飞船、子弹与命中爆炸，不画星点 / HUD。
  */
 
 import { createSurface } from '../codec/raster.js';
 import type { Action, Frame, Level, RenderContext } from '../../contract/action.js';
 import { classicMotion, expand, type BulletFlight, type Phase } from '../motion.js';
 import { classicLayout, classicTheme, levelIndexOfHeat, type ClassicTheme } from './theme.js';
+import { createBackdrop } from './backdrop.js';
 
 interface Burst {
   x: number;
@@ -138,6 +140,7 @@ function applyFrame(
 
 function paint(
   surface: Surface,
+  backdrop: Uint8ClampedArray,
   level: Level,
   ctx: RenderContext,
   state: State,
@@ -145,7 +148,7 @@ function paint(
   targets: ReadonlyMap<string, Placement>,
 ): Frame {
   const layout = classicLayout(level.columns, ctx, theme);
-  surface.fill(theme.background);
+  surface.data.set(backdrop);
 
   for (let column = 0; column < level.columns; column += 1) {
     for (let row = 0; row < 7; row += 1) {
@@ -197,6 +200,7 @@ export function* animate(
   theme: ClassicTheme = classicTheme,
 ): Generator<Frame, void, undefined> {
   const surface = createSurface(ctx.width, ctx.height);
+  const backdrop = createBackdrop(ctx, theme);
   const layout = classicLayout(level.columns, ctx, theme);
   const startX = Math.floor(level.columns / 2);
   const state: State = {
@@ -221,7 +225,7 @@ export function* animate(
   }
 
   let emitted = 0;
-  const emit = (): Frame => paint(surface, level, ctx, state, theme, targets);
+  const emit = (): Frame => paint(surface, backdrop, level, ctx, state, theme, targets);
   for (const phase of expand(actions, startX, classicMotion)) {
     if (emitted >= ctx.maxFrames) return;
     applyFrame(phase, state, targets, layout, theme);
