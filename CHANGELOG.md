@@ -127,6 +127,12 @@
   `.gitignore` 白名单与 README / `todo.md` / ADR 的路径引用同步。
   组织方式参考 `h1s97x/plugins/profile-3d-contrib`（效果图放 `examples/` 根下、
   与 `pipelines/` 并列、和 `docs/` 下的文档分开）。
+- **两侧个人主页流水线正式替换**（[ADR 0000 第 31 节](docs/adr/0000-rewrite-baseline.md)）：
+  GitHub `h1s97x/h1s97x` 的 `update-game.yml` 改用 `space-invaders@v0.1.0`
+  （原本被手动禁用，已启用），CNB `h1s97x/h1s97x` 的 cron 流水线把
+  `cnb-space-invaders` 换成 `space-invaders:v0.1.0`，产物均为 `game.gif`；
+  旁路测试文件删除，CNB `api_trigger` 保留为手动刷新入口，主页文案同步。
+  正式流水线两侧各跑一次均 success，产物 `GIF89a` 可解码。
 - **修复 GitHub container action 加载失败**（端到端实测发现）：`action.yml` 的 `runs.env`
   曾使用 `github.repository_owner` / `github.token`，而 Docker action 的 `runs.env`
   不支持 `github` 上下文，workflow 在加载阶段即报错。`user` / `token` 改为调用方显式传入，

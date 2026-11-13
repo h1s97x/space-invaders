@@ -149,7 +149,10 @@
   CNB `api_trigger` 自包含；两侧均 success、GIF 可解码，线上 `game.gif` 未动。
   **实测修复**：`action.yml` 的 `runs.env` 不支持 `github` 上下文，
   改由调用方显式传 `user` / `token`；`v0.1.0` tag 已强制更新到修复提交。
-  阶段 2（正式替换旧插件）待用户确认。PAT 临时文件已删，**需平台侧吊销**。
+  阶段 2 已完成：两个 profile 仓库正式换用新插件、产物改回 `game.gif`；
+  GitHub `update-game.yml` 原为 `disabled_manually` 已启用，CNB `api_trigger` 保留为手动刷新入口。
+  正式流水线各跑一次均 success（GitHub `43397771290`、CNB `cnb-6jd-1k7a254oj`）。
+  PAT 临时文件已删，**需平台侧吊销**。
   发布冻结已解禁；主仓改动按批次提交并推送。
 - **全部成果已在 CNB 主仓**：`main`（交接时 `d546791`；之后每次文档提交都会前进，
   新环境一律以 `git log -1` 为准），工作区干净，33 个测试全绿，
@@ -323,8 +326,9 @@ GitHub Actions `CI` 在 `206c9d3` 上 `completed / success`。
   1024×256 / 849 帧 / 1.54MB，`GIF89a` 可解码。
 - 实测发现并修复 `action.yml` 的 `runs.env` 不支持 `github` 上下文（详见 ADR 第 31 节）。
 
-**仍待用户确认**：阶段 2 把旧插件正式替换掉，产物名改回 `game.gif`；
-本轮按「我需要测试」的口径只做旁路，不擅自改线上展示。
+**阶段 2 已完成**：用户确认「替换」后，两侧正式流水线改用新插件、产物 `game.gif`，
+旁路测试文件与 `game-v2.gif` 已删；正式运行均 success，产物 `GIF89a` 可解码。
+GitHub `update-game.yml` 此前被手动禁用（历史两次运行失败），已启用。
 
 ### P1-3 · `source=github` 的完整图 —— 已完成（2026-11-13，ADR 0000 第 31 节）
 

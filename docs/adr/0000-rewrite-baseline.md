@@ -1174,8 +1174,13 @@ travel 约 7,700 帧，加每发弹道 + 冷却约 5,700 帧，合计 ~13,400 �
   - 线上 `game.gif` 与 `cnb-metrics.svg` / `snake.svg` / `profile-3d-contrib/*.svg` 均未受影响。
 - CNB 取数匿名 401 / 带 token 200，`settings.token: ${CNB_TOKEN}` 实测生效；
   `entrypoint.sh` 的零平台内核未改。
-- **未做（需用户确认）**：阶段 2 把两个 profile 仓库的旧插件正式替换成新插件
-  （产物从 `game-v2.gif` 改回 `game.gif`）；目前线上仍由旧插件更新。
+- **阶段 2 已完成（用户确认「替换」）**：两个 profile 仓库的旧插件正式换成
+  `space-invaders@v0.1.0` / `:v0.1.0`，产物改回 `game.gif`；
+  旁路测试 workflow / `game-v2.gif` 已删除。GitHub 的 `update-game.yml`
+  原为 `disabled_manually`（历史两次运行均失败），已启用并验证；
+  CNB 的 `api_trigger` 保留为手动刷新入口。
+  正式流水线各跑一次均 success：GitHub run `43397771290` → 1024×256 / 3081 帧 / 6.90MB，
+  CNB build `cnb-6jd-1k7a254oj` → 1024×256 / 849 帧 / 1.54MB，两侧 `GIF89a` 可解码。
 - 用户提供的 GitHub PAT 存于权限 600 的临时文件、用完删除，未写入任何仓库文件；
   **需立即在 GitHub 平台侧吊销**。
 - 发布冻结已解禁；主仓改动按批次提交并推送。
