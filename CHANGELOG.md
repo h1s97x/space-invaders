@@ -109,6 +109,15 @@
 - 四张图重出（统一调色板）：`invader` CNB 761 帧 / 1.36MB、GitHub 2619 帧 / 5.86MB；
   `classic` CNB 849 帧 / 1.21MB、GitHub 3081 帧 / 4.08MB。
   两个系列背景与飞船视觉一致，区别只在怪物造型。
+- **invader 加背景、移速与子弹对齐 classic**（[ADR 0000 第 30 节](docs/adr/0000-rewrite-baseline.md)）：
+  用户澄清两个系列是特意区分的（区分靠怪物造型与背景），飞船外观统一保留、`classic` 定格。
+  `invader` 恢复静态深空背景（偏蓝 8 色带渐变 + 140 颗分档星点 + 1px 基准线）；
+  `defaultMotion` 的 `shipStep` / `maxTravelFrames` / `bulletFrames` 对齐 `classicMotion`；
+  子弹与爆炸改用 classic 的黄色胶囊画法与弹色 `[255,223,0]`，
+  删除 `bulletTrail` / `explosion` / `explosionCore` 字段，`ACCENT_COLORS` 精简为 5 色。
+- 四张图重出：两系列帧数已一致（CNB 849、GitHub 3081），
+  `invader` CNB 1.54MB / GitHub 6.90MB，`classic` CNB 1.22MB / GitHub 4.08MB。
+  节奏对齐让 `invader` 帧数与体积上涨（GitHub 5.86MB → 6.90MB）。
 - **发布冻结**：打 tag 与发布镜像等画面验收通过后再执行；`package.json` 与示例 `uses:`
   的版本号仍未统一（见 `todo.md` P0-1 / P0-2）。
 

@@ -28,8 +28,8 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 
 两种渲染器通过 `CONTRIB_RENDERER` 切换，都能吃任意数据源。下面是真实数据、
 默认参数生成的 **1024×256 完整动画**（不是 10 帧冒烟版；CNB 数据取自 2026-11-13）。
-两者节奏不同（`classic` 按 legacy 比例、`invader` 弹道更短）；飞船都是多帧匀速滑行，
-两者都允许多颗子弹同时在飞。
+两者的飞船移速、子弹与节奏已对齐（帧数一致），都允许多颗子弹同时在飞；
+视觉上刻意区分：`classic` 是极简纯渐变 + 绿方块，`invader` 是深空星点背景 + 像素外星人。
 
 ### `classic` · 贡献绿方块方阵（legacy 比例节奏）
 
@@ -46,14 +46,14 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 
 ### `invader`（默认）· 像素外星人
 
-8×8 三型两帧精灵按列错峰波浪、极淡深空渐变、逐帧飞行的子弹与命中爆炸；
-飞船与背景同 `classic`，不画 HUD、网格、星点、光带与滚动线等装饰。
+8×8 三型两帧精灵按列错峰波浪、静态深空背景（渐变 + 星点 + 1px 基准线）、
+黄色胶囊子弹与命中爆炸；飞船与 `classic` 统一，不画 HUD、网格、光带与滚动线。
 
-**CNB 活跃日历** — 99 个目标 / 761 帧
+**CNB 活跃日历** — 99 个目标 / 849 帧
 
 ![invader CNB](docs/assets/contrib-cnb.gif)
 
-**GitHub 贡献日历** — 221 个目标 / 2619 帧
+**GitHub 贡献日历** — 221 个目标 / 3081 帧
 
 ![invader GitHub](docs/assets/contrib-github.gif)
 
