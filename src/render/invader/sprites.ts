@@ -64,43 +64,30 @@ export function drawEnemy(
   }
 }
 
-/** 菱形机身 + 两片半透明后掠翼 + 翼尖实色 + 座舱高光。 */
+/** 飞船：与 classic 统一的 Galaga 风（半透明双翼 + 翼尖竖条 + 菱形机身）。 */
 export function drawShip(surface: Surface, cx: number, top: number, cell: number, theme: Theme): void {
-  const bodyHalf = Math.max(4, cell * 0.42);
-  const wingHalf = Math.max(7, cell * 0.82);
-  const nose = top;
-  const widest = top + cell * 0.62;
-  const tail = top + cell * 1.15;
-
+  const ix = Math.floor(cx);
+  const wing = Math.max(5, cell * 0.67);
   for (const side of [-1, 1] as const) {
-    const wing: Point[] = [
-      [cx + side * bodyHalf * 0.7, top + cell * 0.4],
-      [cx + side * wingHalf, top + cell * 0.95],
-      [cx + side * wingHalf, tail],
-      [cx + side * bodyHalf * 0.7, top + cell * 0.72],
+    const shape: Point[] = [
+      [ix + side * 2, top + cell * 0.5],
+      [ix + side * wing, top + cell * 0.8],
+      [ix + side * wing, top + cell],
+      [ix + side * 2, top + cell * 0.7],
     ];
-    surface.polygon(wing, theme.shipWing, 0.5);
+    surface.polygon(shape, theme.ship, 0.5);
     surface.rect(
-      cx + side * wingHalf - (side < 0 ? cell * 0.1 : 0),
-      top + cell * 0.45,
-      cx + side * wingHalf + (side > 0 ? cell * 0.1 : 0),
-      tail,
+      ix + side * wing - 1, top + cell * 0.5,
+      ix + side * wing + 1, top + cell,
       theme.ship,
     );
   }
-
-  surface.polygon(
-    [[cx, nose], [cx - bodyHalf, widest], [cx, tail], [cx + bodyHalf, widest]],
-    theme.ship,
-  );
-  surface.rect(
-    cx - Math.max(1, cell * 0.09),
-    top + cell * 0.2,
-    cx + Math.max(1, cell * 0.09),
-    top + cell * 0.5,
-    theme.cockpit,
-    0.9,
-  );
+  surface.polygon([
+    [ix, top],
+    [ix - cell * 0.25, top + cell * 0.7],
+    [ix, top + cell],
+    [ix + cell * 0.25, top + cell * 0.7],
+  ], theme.ship);
 }
 
 /**
