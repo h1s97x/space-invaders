@@ -94,6 +94,13 @@
   `theme.ts` 导出 `levelIndexOfHeat()`；四档绿都能出现，不丢「哪天贡献多」的信息。
 - 两张 `classic` 效果图重出（CNB 846 帧 / 1.19MB、GitHub 3081 帧 / 4.03MB），
   体积与脏矩形几乎不变；`invader` 未改。
+- **classic 补上静态深空渐变**（[ADR 0000 第 28 节](docs/adr/0000-rewrite-baseline.md)）：
+  用户指出另一风格的两张效果图仍是纯黑底。新增 `src/render/classic/backdrop.ts`，
+  8 色带 `[10,13,20] → [19,25,38]`，与 `invader` 对称但更克制 ——
+  不加星点（第 17 节已删）、不加基准线（飞船位置冲突）；
+  只算一次、每帧复用，零差分。第 26 节「`classic` 不动」由本节取代。
+- 两张 `classic` 图重出（CNB 846 帧 / 1.21MB、GitHub 3081 帧 / 4.08MB），
+  体积 +1.2–1.6%、脏矩形不变；`invader` 未改。
 - **发布冻结**：打 tag 与发布镜像等画面验收通过后再执行；`package.json` 与示例 `uses:`
   的版本号仍未统一（见 `todo.md` P0-1 / P0-2）。
 

@@ -33,7 +33,7 @@ CONTRIB_SOURCE=file CONTRIB_CALENDAR=examples/calendar.json node dist/src/cli/in
 
 ### `classic` · 贡献绿方块方阵（legacy 比例节奏）
 
-只留深黑底、四档绿方块（每次命中退化一档）、Galaga 风小飞船、
+只留极淡深空渐变、四档绿方块（每次命中退化一档）、Galaga 风小飞船、
 黄色胶囊子弹与命中爆炸；不画星点、分数与署名 HUD。
 
 **CNB 活跃日历** — 99 个目标 / 846 帧
