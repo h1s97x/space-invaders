@@ -22,10 +22,11 @@ export interface MotionParams {
   tailFrames: number;
 }
 
+/** invader 的移速与弹道帧数已对齐 classicMotion（第 30 节），两系列节奏一致。 */
 export const defaultMotion: Readonly<MotionParams> = Object.freeze({
-  shipStep: 2.5,
-  maxTravelFrames: 8,
-  bulletFrames: 3,
+  shipStep: 2,
+  maxTravelFrames: 10,
+  bulletFrames: 5,
   shotInterval: 2,
   tailFrames: 5,
 });

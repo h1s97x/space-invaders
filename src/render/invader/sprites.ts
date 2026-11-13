@@ -90,21 +90,18 @@ export function drawShip(surface: Surface, cx: number, top: number, cell: number
   ], theme.ship);
 }
 
-/**
- * 子弹：竖直胶囊本体（4 层叠色）+ 下方 3 段递减拖尾。
- * 画法取自有旧仓的弹体资产，尺寸与衰减均为本项目自定。
- */
-export function drawBullet(surface: Surface, x: number, y: number, theme: Theme): void {
-  const halfH = 5;
-  const gap = 6;
+/** 子弹：与 classic 一致的 3 段递减拖尾 + 4 层叠色黄色胶囊。 */
+export function drawBullet(surface: Surface, x: number, y: number, cell: number, theme: Theme): void {
+  const gap = Math.max(2, cell * 0.17);
+  const halfH = Math.max(4, cell * 0.33);
   for (let i = 3; i >= 1; i -= 1) {
     const ty = y + i * gap;
-    surface.rect(x - 1, ty - 3, x + 1, ty + 3, theme.bulletTrail, 0.45 / i);
+    surface.rect(x - 1, ty - 3, x + 1, ty + 3, theme.bullet, 0.5 / i);
   }
-  surface.rect(x - 3, y - halfH - 2, x + 3, y + halfH + 2, theme.bullet, 0.2);
-  surface.rect(x - 2, y - halfH - 1, x + 2, y + halfH + 1, theme.bullet, 0.4);
-  surface.rect(x - 1, y - halfH, x + 1, y + halfH, theme.bullet, 0.72);
-  surface.rect(x, y - halfH + 1, x + 1, y + halfH - 1, theme.explosionCore);
+  surface.rect(x - 3, y - halfH - 2, x + 3, y + halfH + 2, theme.bullet, 0.3);
+  surface.rect(x - 2, y - halfH - 1, x + 2, y + halfH + 1, theme.bullet, 0.45);
+  surface.rect(x - 1, y - halfH, x + 1, y + halfH, theme.bullet, 0.7);
+  surface.rect(x, y - halfH + 1, x + 1, y + halfH - 1, theme.bullet);
 }
 
 export interface Burst {
@@ -126,7 +123,7 @@ export function drawBursts(surface: Surface, bursts: readonly Burst[], theme: Th
     for (const angle of burst.angles) {
       const px = burst.x + Math.cos(angle) * radius;
       const py = burst.y + Math.sin(angle) * radius;
-      const color = burst.age < 2 ? theme.explosionCore : theme.explosion;
+      const color = theme.bullet;
       surface.rect(px - size, py - size, px + size, py + size, color, fade);
     }
   }

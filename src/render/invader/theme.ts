@@ -4,25 +4,29 @@
  * 全览大画布：默认 1024×256，53 列 × 16px 一屏看完。
  * 8×8 点阵精灵每点正好 2px，不会溢出格子互相糊在一起。
  * 常量、布局与配色全部本项目自定，不沿用任何上游项目的数值或节奏。
- * 零数据装饰已清零（第 19 节），背景与飞船以 classic 为基准统一
- * （第 26、29 节），见 `docs/adr/0000-rewrite-baseline.md`。
+ * 零数据装饰已清零（第 19 节）；飞船外观与 classic 统一（第 29 节），
+ * 背景则是刻意区分的静态深空（第 26、30 节）。
+ * 见 `docs/adr/0000-rewrite-baseline.md`。
  */
 
 import type { RGB } from '../codec/types.js';
 import type { EnemyKind, RenderContext } from '../../contract/action.js';
 
 export interface Theme {
-  /** 深渐变的上沿色（与 classic 一致） */
+  /** 深渐变的上沿色（invader 偏蓝，与 classic 的极简渐变刻意区分） */
   background: RGB;
   /** 深渐变的下沿色 */
   bgBottom: RGB;
   /** 渐变量化色带数；有限色带才不会打满 256 色表 */
   bandCount: number;
+  /** 静态灰度星点数量 */
+  starCount: number;
+  /** 1px 静态水平基准线颜色 */
+  baseline: RGB;
+  /** 基准线所在行 */
+  baselineY: number;
   ship: RGB;
   bullet: RGB;
-  bulletTrail: RGB;
-  explosion: RGB;
-  explosionCore: RGB;
   drone: RGB;
   cluster: RGB;
   boss: RGB;
@@ -39,14 +43,14 @@ export interface Theme {
 }
 
 export const defaultTheme: Readonly<Theme> = {
-  background: [10, 13, 20],
-  bgBottom: [19, 25, 38],
+  background: [9, 13, 22],
+  bgBottom: [18, 26, 42],
   bandCount: 8,
+  starCount: 140,
+  baseline: [30, 42, 64],
+  baselineY: 216,
   ship: [68, 147, 248],
-  bullet: [255, 232, 140],
-  bulletTrail: [255, 138, 62],
-  explosion: [255, 162, 74],
-  explosionCore: [255, 246, 210],
+  bullet: [255, 223, 0],
   drone: [92, 220, 132],
   cluster: [116, 224, 255],
   boss: [255, 148, 194],

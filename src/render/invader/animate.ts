@@ -1,7 +1,7 @@
 /**
  * 帧序列生成：Level + Action[] → 完整 RGBA 帧。
  *
- * 静态底图（与 classic 一致的 8 色带深渐变，无星点 / 基准线）只算一次；
+ * 静态底图（偏蓝渐变 + 分档静态星点 + 1px 基准线，与 classic 刻意区分）只算一次；
  * 怪物、多颗在飞的子弹、爆炸、飞船逐帧叠加。
  * 怪物两帧按相邻列分组错峰，形成缓慢扫过的波浪（ADR 0000 第 21 节）。
  * 逐帧事件由 render/motion.ts 按帧推进：允许多弹齐飞，命中只在子弹到达帧结算。
@@ -131,7 +131,7 @@ function paint(
     const at = place(layout, targets.get(bullet.action.target ?? ''),
       bullet.action.column ?? Math.round(state.shipX));
     const y = layout.shipY + (at.y - layout.shipY) * bullet.progress;
-    drawBullet(surface, at.x, y, theme);
+    drawBullet(surface, at.x, y, layout.cell, theme);
   }
 
   const shipCx = layout.gridLeft + state.shipX * layout.cell + layout.cell / 2;
