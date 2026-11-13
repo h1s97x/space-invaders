@@ -145,8 +145,8 @@
 - 两个旧仓（`cnb-space-invaders`、`cnb-profile-3d-contrib`）已归档（`status: 1`），
   公告已贴、`#13` / `#18` 已带结论关闭；重写前历史保存在 `legacy/pre-rewrite`（`8d63e8a`）。
 - **剩余两件最紧急的人工动作**（详见第 4 节 P0）：
-  1. 打 `v*` tag 触发 `.cnb.yml` 发布插件镜像 —— 目前 `space-invaders:latest` **根本不存在**。
-  2. 统一版本号并补 tag —— 文档引用的 `uses:...@v0.1.0` 这个 ref **不存在**。
+  1. ~~打 `v*` tag 触发镜像发布~~ → 已打 `v0.1.0`，由 tag_push 流水线发布镜像。
+  2. ~~统一版本号并补 tag~~ → 首个发布版本 `0.1.0`，三处引用一致。
 - **第 3 件已完成**（2026-11-12 晚）：用 GitHub PAT 同步了分发端点
   （同步时 `main` / `latest` = `206c9d3`，后续提交以 `git ls-remote` 为准），
   并补推 `legacy/pre-rewrite`；GitHub Actions CI success。详见 P0-3 / P2-2。
@@ -250,11 +250,12 @@ GIT_CONFIG_VALUE_0='!cnb git-credential' git push origin HEAD:main
 
 ## 4. 未完成事项（按优先级，含背景）
 
-> **【2026-11-13】P0-1 / P0-2 冻结中**：画面按 ADR 0000 第 17 节重做完成，
-> 尚待用户目视验收；验收通过前不打 tag、不发镜像。其余 P1 / P2 照旧。
-> P0-3 与 P2-2 已完成。
+> **【2026-11-13】画面已验收，P0-1 / P0-2 解禁**：用户确认「行了就先这样吧」。
+> 首个发布版本定为 `v0.1.0`（此前 0.1.0–0.4.0 均为未发布的纸面里程碑）。
+> tag 已推 CNB 主仓并同步到 GitHub 分发端点；镜像由 `tag_push` 流水线发布。
+> 其余 P1 / P2 照旧；P0-3 与 P2-2 已完成。
 
-### P0-1 · 新插件镜像从未发布（新发现，最紧急）
+### P0-1 · 新插件镜像发布 —— 已触发（v0.1.0 tag_push）
 
 **现象**：`docker manifest inspect docker.cnb.cool/h1s97x/plugins/space-invaders:latest` 失败；
 `examples/pipelines/cnb.yml` 与 `plugin-meta.json` 指向的坐标目前拉不到。
@@ -265,16 +266,18 @@ GIT_CONFIG_VALUE_0='!cnb git-credential' git push origin HEAD:main
 `docker manifest inspect` 确认 `:latest` 与版本 tag 都可拉取 → 必要时手动构建补推。
 **验收**：新镜像可拉取；`examples/pipelines/cnb.yml` 能跑通一次；旧镜像仍可拉取。
 
-### P0-2 · 版本与 tag 不一致，`@v0.1.0` 引用不存在（新发现）
+### P0-2 · 版本与 tag —— 已完成（首个发布 `v0.1.0`）
 
-**现象**：`package.json` 是 `0.1.0`，`CHANGELOG.md` 最新是 `0.4.0`；
+**原现象**：`package.json` 是 `0.1.0`，`CHANGELOG.md` 纸面最新是 `0.4.0`；
 `README.md` 第 88 行与 `examples/pipelines/github-actions.yml` 第 16 行写
 `uses: h1s97x/space-invaders@v0.1.0`，但 `git ls-remote --tags` 为空。
 `sync-github.sh` 用 `git describe --tags` 找 tag，无 tag 时 `TAGS=none`，分发端点也永远没 tag。
 **影响**：GitHub Action 示例照抄必然失败；版本号三处不一致。
-**动作（需先定版本，建议统一到 `0.4.0`）**：同步 `package.json`、README/示例的 `uses:`
-引用、`CHANGELOG` → 打 `v0.4.0` tag → 推 CNB 主仓 → 同步 tag 到分发端点。
-**验收**：`git ls-remote --tags origin` 有 `v0.4.0`；`uses:...@v0.4.0` 可解析；三处版本号一致。
+**已执行**：用户指出「连第一个版本都还没有」，首个发布定为 `0.1.0`。
+`CHANGELOG` 的纸面 0.1.0–0.4.0 改称「开发期里程碑（未发布）」，`[Unreleased]` 内容归入 `0.1.0`；
+`package.json` / README / 示例 `uses:` 三处本就是 `0.1.0`，无需改。
+打 `v0.1.0` tag → 推 CNB 主仓 → `sync-github.sh` 同步 main + tag。
+**验收**：`git ls-remote --tags origin` 有 `v0.1.0`；`uses:...@v0.1.0` 可解析；三处版本号一致。
 **关联**：这一条做完才能做 P0-1（tag 同时是镜像发布触发器）。
 
 ### P0-3 · GitHub 分发端点同步 —— 已完成（2026-11-12 晚）
@@ -305,7 +308,7 @@ GitHub Actions `CI` 在 `206c9d3` 上 `completed / success`。
 分发端点已同步到新代码，但**无任何 tag**，`uses:@v0.x` 仍不可解析，
 container action 在真实工作流里**从未运行过**。
 **动作**：P0-1/P0-2 完成后，在示例仓库各跑一次真实流水线
-（GitHub `uses:@v0.4.0`、CNB `examples/pipelines/cnb.yml`），确认容器入口、
+（GitHub `uses:@v0.1.0`、CNB `examples/pipelines/cnb.yml`），确认容器入口、
 `runs.env` / `PLUGIN_*` 前缀归一、产物落盘与提交都正常。
 **验收**：两侧各一次真数据端到端，产物 GIF 可解码。
 

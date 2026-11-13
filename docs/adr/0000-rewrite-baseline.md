@@ -1123,3 +1123,36 @@ travel 约 7,700 帧，加每发弹道 + 冷却约 5,700 帧，合计 ~13,400 �
   子弹同为黄色胶囊 `[255,223,0]`；区别在怪物造型与背景层次。
 - `Action` 契约、`domain/`、错峰波浪、多弹齐飞、零依赖均未改。
 - 按用户约定分批提交并推送 CNB 主仓；发布继续冻结。
+
+---
+
+## 31. 首个发布版本定为 0.1.0，接通两侧 profile 流水线（2026-11-13）
+
+**用户反馈**：「仓库里连第一个版本都还没有，怎么就 0.4.0 了？」
+
+**事实核对**：`package.json` / README / `examples/pipelines/github-actions.yml` /
+`docs/05-migration.md` 全部写 `0.1.0`；`CHANGELOG.md` 里 `0.1.0`–`0.4.0` 都是
+2026-11-12 同一天的开发期纸面里程碑，**从未打 tag、从未发布镜像**。
+`git ls-remote --tags` 两侧均为空。
+
+**决策**：
+
+1. 首个实际发布版本为 **`v0.1.0`**，不跳到 `0.4.0`。
+   `CHANGELOG` 的纸面版本段改称「开发期里程碑 M1–M4（未发布）」，`[Unreleased]`
+   全部内容归入 `0.1.0`；`package.json` 与三处 `uses:@v0.1.0` 保持不变。
+2. `action.yml` 的 `rule` 默认值从 `waves` 改为 `shuffle`（与 CLI 对齐），
+   `height` 描述去掉已删除的 HUD / 地平线；否则 Actions 跑出的是旧逐列清场。
+3. 打 `v0.1.0` tag → 触发 `.cnb.yml` 的 `publish-plugin-image` → `sync-github.sh`
+   把 `main` + tag 同步到 GitHub 分发端点（此前 `main` 停在 `c1a910b2`，
+   第 17–30 轮画面改动从未同步）。
+4. 按「先旁路测试、后替换」接通两侧个人主页仓库：
+   GitHub `h1s97x/h1s97x` 新增只开 `workflow_dispatch` 的测试 workflow、产物 `game-v2.gif`；
+   CNB `h1s97x/h1s97x` 在**现有** `refresh-homepage-assets` 流水线的 stages 里追加测试 stage
+   （CNB 工作区只在同条流水线各 stage 间共享，不能新开一条）。
+   线上 `game.gif` 仍由旧插件更新，验证通过后再替换。
+5. CNB 取数实测匿名 401、带 `CNB_TOKEN` 200，故 `settings.token: ${CNB_TOKEN}` 必须显式传；
+   `entrypoint.sh` 的零平台内核保持不变（平台差异只在配置层）。
+6. 用户提供的 GitHub PAT 仅用于 `sync-github.sh` 与 clone，不写入任何仓库文件，
+   存于权限 600 的临时文件，用完删除并提醒平台侧吊销。
+
+**验收**：实施后补。
