@@ -32,8 +32,8 @@ test('两种渲染器都注册，同一 Level 都能产出帧', () => {
   const classic = [...renderers.get('classic').frames(level, simulateLevel(level), ctx)];
   assert.ok(invader.length > 10);
   assert.ok(classic.length > 10);
-  assert.ok(classic.length > invader.length,
-    'classic 用 legacy 比例节奏，帧数应多于 invader 的快节奏');
+  assert.equal(classic.length, invader.length,
+    '两渲染器的移速与弹道节奏已对齐，帧数应一致');
   assert.equal(classic[0]!.width, ctx.width);
   assert.equal(classic[0]!.height, ctx.height);
   assert.notDeepEqual([...classic[0]!.data], [...invader[0]!.data], '两种输出应确实不同');
