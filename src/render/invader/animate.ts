@@ -1,9 +1,9 @@
 /**
  * 帧序列生成：Level + Action[] → 完整 RGBA 帧。
  *
- * 静态底图（纯色 + 固定星点）只算一次；怪物、子弹、爆炸、飞船逐帧叠加。
- * 画面里只有这四类携带数据，其余装饰已清零（ADR 0000 第 19 节）。
- * 逐帧阶段由 render/motion.ts 展开：到位才开火、弹道走完才命中。
+ * 静态底图（纯色 + 固定星点）只算一次；怪物、多颗在飞的子弹、爆炸、飞船逐帧叠加。
+ * 怪物两帧按相邻列分组错峰，形成缓慢扫过的波浪（ADR 0000 第 21 节）。
+ * 逐帧事件由 render/motion.ts 按帧推进：允许多弹齐飞，命中只在子弹到达帧结算。
  * 只认 contract/ 的 Level 与 Action，不 import 具体玩法模块。
  */
 
@@ -11,7 +11,7 @@ import { createSurface } from '../codec/raster.js';
 import { enemyKindOf, type Action, type Frame, type Level, type RenderContext, type Tier } from '../../contract/action.js';
 import { colorForKind, defaultTheme, layoutFor, type Layout, type Theme } from './theme.js';
 import { createBackdrop } from './backdrop.js';
-import { expand, type Phase } from '../motion.js';
+import { expand, type BulletFlight, type Phase } from '../motion.js';
 import {
   drawBullet,
   drawBursts,
@@ -20,18 +20,15 @@ import {
   type Burst,
 } from './sprites.js';
 
-interface Bullet {
-  x: number;
-  fromY: number;
-  toY: number;
-  progress: number;
-}
+/** 错峰周期与列分组：相邻 3 列同相位，组间差 1 帧，形成扫过的波浪。 */
+const WAVE_PERIOD = 18;
+const WAVE_GROUP = 3;
 
 interface State {
   remaining: Map<string, number>;
   shipX: number;
+  bullets: readonly BulletFlight[];
   bursts: Burst[];
-  bullet: Bullet | null;
   random: () => number;
 }
 
@@ -64,7 +61,7 @@ function place(layout: Layout, target: Placement | undefined, fallbackColumn: nu
   };
 }
 
-function applyPhase(
+function applyFrame(
   phase: Phase,
   state: State,
   layout: Layout,
@@ -72,41 +69,26 @@ function applyPhase(
   targets: ReadonlyMap<string, Placement>,
   random: () => number,
 ): void {
-  switch (phase.kind) {
-    case 'start':
-      return;
-    case 'travel':
-      state.shipX = phase.from + (phase.to - phase.from) * phase.progress;
-      return;
-    case 'launch':
-    case 'flight': {
-      const key = phase.action.target ?? '';
-      const at = place(layout, targets.get(key), phase.kind === 'launch' ? phase.column : Math.round(state.shipX));
-      state.bullet = { x: at.x, fromY: layout.shipY, toY: at.y, progress: phase.progress };
-      return;
-    }
-    case 'impact': {
-      const key = phase.action.target ?? '';
-      const left = state.remaining.get(key) ?? 0;
-      const next = Math.max(0, left - 1);
-      state.remaining.set(key, next);
-      state.bullet = null;
+  state.shipX = phase.shipX;
+  state.bullets = phase.bullets;
 
-      const at = place(layout, targets.get(key), Math.round(state.shipX));
-      const dead = left > 0 && next === 0;
-      state.bursts.push({
-        x: at.x,
-        y: at.y,
-        age: 0,
-        angles: Array.from({ length: dead ? 9 : 4 }, () => random() * Math.PI * 2),
-        lifetime: dead ? theme.explosionFrames : 3,
-        maxRadius: dead ? theme.cellMax * 1.5 : theme.cellMax * 0.6,
-      });
-      return;
-    }
-    case 'cooldown':
-    case 'tail':
-      return;
+  // 只允许在子弹真正到达的帧扣血、放爆炸；发射顺序与命中顺序一致。
+  for (const action of phase.impacts) {
+    const key = action.target ?? '';
+    const left = state.remaining.get(key) ?? 0;
+    const next = Math.max(0, left - 1);
+    state.remaining.set(key, next);
+
+    const at = place(layout, targets.get(key), action.column ?? Math.round(state.shipX));
+    const dead = left > 0 && next === 0;
+    state.bursts.push({
+      x: at.x,
+      y: at.y,
+      age: 0,
+      angles: Array.from({ length: dead ? 9 : 4 }, () => random() * Math.PI * 2),
+      lifetime: dead ? theme.explosionFrames : 3,
+      maxRadius: dead ? theme.cellMax * 1.5 : theme.cellMax * 0.6,
+    });
   }
 }
 
@@ -118,6 +100,8 @@ function paint(
   state: State,
   layout: Layout,
   theme: Theme,
+  targets: ReadonlyMap<string, Placement>,
+  frameIndex: number,
 ): Frame {
   surface.data.set(backdrop);
 
@@ -126,6 +110,9 @@ function paint(
       const left = state.remaining.get(target.key) ?? 0;
       if (left <= 0) continue;
       const kind = enemyKindOf(Math.min(3, left) as Tier);
+      // 按相邻列分组错开相位：同组同步、组间差一帧，整体像一道缓慢扫过的波浪。
+      const phase = (frameIndex + Math.floor(target.column / WAVE_GROUP)) % WAVE_PERIOD;
+      const frame: 0 | 1 = phase < WAVE_PERIOD / 2 ? 0 : 1;
       drawEnemy(
         surface,
         layout.gridLeft + target.column * layout.cell,
@@ -133,15 +120,17 @@ function paint(
         layout.cell,
         kind,
         colorForKind(theme, kind),
-        0,
+        frame,
       );
     }
   }
 
   drawBursts(surface, state.bursts, theme);
-  if (state.bullet) {
-    const y = state.bullet.fromY + (state.bullet.toY - state.bullet.fromY) * state.bullet.progress;
-    drawBullet(surface, state.bullet.x, y, theme);
+  for (const bullet of state.bullets) {
+    const at = place(layout, targets.get(bullet.action.target ?? ''),
+      bullet.action.column ?? Math.round(state.shipX));
+    const y = layout.shipY + (at.y - layout.shipY) * bullet.progress;
+    drawBullet(surface, at.x, y, theme);
   }
 
   const shipCx = layout.gridLeft + state.shipX * layout.cell + layout.cell / 2;
@@ -169,8 +158,8 @@ export function* animate(
   const state: State = {
     remaining: new Map(),
     shipX: startX,
+    bullets: [],
     bursts: [],
-    bullet: null,
     random,
   };
 
@@ -183,12 +172,13 @@ export function* animate(
   }
 
   let emitted = 0;
-  const emit = (): Frame => paint(surface, backdrop, level, ctx, state, layout, theme);
+  const emit = (frameIndex: number): Frame =>
+    paint(surface, backdrop, level, ctx, state, layout, theme, targets, frameIndex);
   for (const phase of expand(actions, startX)) {
     if (emitted >= ctx.maxFrames) return;
-    applyPhase(phase, state, layout, theme, targets, random);
-    if (phase.kind !== 'start') step(state);
-    yield emit();
+    applyFrame(phase, state, layout, theme, targets, random);
+    step(state);
+    yield emit(emitted);
     emitted += 1;
   }
 }
